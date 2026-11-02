@@ -1,4 +1,43 @@
-# KaraokeVerse 3D v1.2.1 — Sửa tư thế micro & vị trí đứng dậy (Three.js)
+# KaraokeVerse 3D v1.2.2 — Auto-Tune Lab (beta)
+
+Phiên bản nâng cấp từ **v1.2.1-deploy**, giữ nguyên không gian 3D Three.js, nhân vật, phòng online, hàng chờ YouTube, chat, Socket.IO, voice chat WebRTC và sửa lỗi cầm micro / đứng dậy gần ghế.
+
+## Mới ở v1.2.2
+
+- **Auto-Tune cho micro** (mặc định **tắt**): bật trước hoặc sau khi mở micro.
+- **Chọn tông (Key):** C, C♯, D, D♯, E, F, F♯, G, G♯, A, A♯, B.
+- **Âm giai:** Chromatic, Major, Minor, Pentatonic.
+- **Độ mạnh:** 0–100%; **tốc độ hiệu chỉnh:** 15–250 ms; **tỷ lệ hiệu ứng:** 0–100%.
+- **Hiển thị nốt nhận diện → nốt mục tiêu**, không lưu bản ghi âm.
+- **Người khác nghe giọng đã xử lý**: `getUserMedia → MediaStreamAudioSourceNode → AudioWorklet → MediaStreamDestination → RTCPeerConnection`; không lấy nhạc YouTube vào effect.
+- **Hỗ trợ fallback:** nếu trình duyệt không chạy được AudioWorklet, micro vẫn gửi giọng gốc và có thông báo rõ ràng.
+- Toàn bộ cài đặt Auto-Tune **cá nhân**, lưu trong `localStorage` của trình duyệt; không đồng bộ tới thành viên khác. Khi micro tắt, cả track đầu vào lẫn đầu ra bị mute.
+
+### Sử dụng
+
+1. Vào phòng và mở mục **✨ AUTO-TUNE LAB** ngay dưới thanh micro.
+2. Bật **Chỉnh cao độ giọng hát**.
+3. Chọn **Key/Scale của bài hát** (theo bài bạn đang hát; game không tự phân tích tông từ YouTube).
+4. Đặt thử **Độ mạnh 60–85%**, **Tốc độ 80–120 ms**, **Mix 70–100%**; chỉnh tùy cảm nhận.
+5. Bấm **Bật micro** và cấp quyền; người khác trong phòng sẽ nghe giọng qua bộ xử lý nếu trình duyệt hỗ trợ. Nên dùng **tai nghe**.
+6. Khi không cần Auto-Tune, bỏ chọn **Bật chỉnh cao độ**; luồng micro trở về âm thanh gốc.
+
+### Những giới hạn kỹ thuật cần biết
+
+Đây là **pitch-correction beta cho giọng đơn âm**, sử dụng bộ dò tần số cơ bản kiểu YIN và dịch cao độ bằng delay line hai đầu đọc có crossfade. Không có cùng chất lượng với Auto-Tune thương mại, có thể nghe âm thanh không tự nhiên, xuất hiện artifacts/glitch và tăng độ trễ. Micro thu tiếng ồn, nhiều người hát chung một mic, hoặc đặt sai Key/Scale sẽ khiến kết quả kém. AudioWorklet cần ngữ cảnh bảo mật (**HTTPS** hoặc **localhost**) và trình duyệt hỗ trợ.
+
+**Đã kiểm tra:** `npm run check`, gồm 18 bài kiểm thử logic và DSP mô phỏng với sóng sin; cú pháp JS hợp lệ. **Chưa kiểm chứng** âm thanh giữa hai thiết bị hay kiểm tra tai nghe/giọng hát thực tế trong trình duyệt: cần tự thử trên máy và Render. Chạy browser test trực tiếp trong môi trường phát triển bị giới hạn. Không tuyên bố đã kiểm thử chất lượng Auto-Tune thực tế.
+
+## Chạy và deploy
+
+- Windows: mở `CHAY-TREN-WINDOWS.bat`, truy cập `http://localhost:3002`. Hoặc CMD: `CHAY-TREN-WINDOWS.bat 3003`.
+- GitHub: **upload toàn bộ nội dung** thư mục dự án, đặc biệt `lib/`, `public/autotune-math.js`, `public/autotune-processor.js`, `public/app.js`, `public/index.html`, `public/style.css` và `package.json`.
+- Render: Web Service Node, Build `npm install`, Start `npm start`, Auto Deploy On Commit. Node 22 qua `.node-version`. Kiểm tra `/health` sau khi deploy.
+- Không cần thêm API key hay thư viện npm riêng cho Auto-Tune; cả bộ DSP xử lý ở phía trình duyệt của người dùng.
+
+---
+
+# Tham khảo: ghi chú phiên bản v1.2.1 (đã tích hợp)
 
 Bản vá tiếp nối **KaraokeVerse v1.2**: không gian 3D có hai chế độ nhập vai, nhân vật nhiều khớp chuyển động, sân khấu biểu diễn, hiệu ứng ánh sáng và đồ vật tương tác được **đồng bộ Socket.IO**, cùng hệ thống phòng riêng, YouTube IFrame, chat và WebRTC micro vốn có.
 
@@ -140,3 +179,8 @@ KaraokeVerse-3D-v1.2/
 ```
 
 Three.js **0.169.0 được tải từ jsDelivr CDN** bằng importmap, không đóng gói trong zip. Cần kết nối Internet để tải thư viện, YouTube API và fonts. Nếu phát hành bản thương mại nên chuyển sang Vite + npm bundle và tự lưu các asset 3D.
+
+
+## Hướng dẫn deploy lên Internet
+
+Xem [HUONG-DAN-DEPLOY.md](HUONG-DAN-DEPLOY.md) và cấu hình mẫu [render.yaml](render.yaml).

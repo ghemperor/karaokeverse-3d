@@ -1,6 +1,13 @@
+import { AUTOTUNE_DEFAULTS, NOTE_NAMES, normalizeAutotune } from './autotune-math.js';
+
 const $ = (id) => document.getElementById(id);
 const AVATARS = ['😎','🤩','🥳','🦊','🐱','🐼','👽','🐻'];
 const socket = window.io({ reconnection: true, reconnectionAttempts: 10 });
+function loadAutotuneSettings() {
+  try { return normalizeAutotune(JSON.parse(localStorage.getItem('karaokeverse-autotune') || '{}')); }
+  catch { return { ...AUTOTUNE_DEFAULTS }; }
+}
+
 const state = {
   myId: null,
   room: null,
@@ -10,6 +17,11 @@ const state = {
   pushToTalk: false,
   transmitting: false,
   localStream: null,
+  rawStream: null,
+  audioContext: null,
+  autoTuneNode: null,
+  autoTuneSupported: true,
+  autoTuneSettings: loadAutotuneSettings(),
   peers: new Map(),
   pendingSignals: [],
   scene: null,
@@ -107,8 +119,13 @@ function resetAndLeave(showToast=true){
   for(const peer of state.peers.values())peer.pc.close();
   state.peers.clear();
   for(const el of document.querySelectorAll('audio[data-peer]'))el.remove();
-  state.localStream?.getTracks().forEach(t=>t.stop());
-  state.localStream=null;state.isMicOn=false;state.transmitting=false;
+  state.localStream?.getTracks().forEach(t => t.stop());
+  state.rawStream?.getTracks().forEach(t => t.stop());
+  state.autoTuneNode?.disconnect();
+  state.audioContext?.close().catch(() => {});
+  state.localStream=null;state.rawStream=null;state.autoTuneNode=null;state.audioContext=null;
+  state.isMicOn=false;state.transmitting=false;
+  $('autotune-pitch').textContent = 'Chưa nhận diện cao độ';
   state.myId=null;state.room=null;state.lastSingerId=null;state.currentVideoId=null;state.pendingSignals=[];
   state.scene?.setLocalUser(null);state.scene?.setMembers([]);state.scene?.setPerformance(null);state.scene?.setView('front');
   if(state.youtubeReady) {try{state.youtube.stopVideo()}catch{}}
@@ -387,6 +404,8 @@ async function receiveSignal({from,description,candidate}={}){
 function setTransmitting(enabled){
   state.transmitting=Boolean(enabled && state.isMicOn);
   state.localStream?.getAudioTracks().forEach(t=>t.enabled=state.transmitting);
+  // Also stop feeding the AudioWorklet while muted, for privacy and CPU usage.
+  state.rawStream?.getAudioTracks().forEach(t=>t.enabled=state.transmitting);
   if(state.room)socket.emit('user:mic',{enabled:state.transmitting});
   updateMicUI();
 }
@@ -398,22 +417,119 @@ function updateMicUI(){
   $('ptt-button').classList.toggle('active',state.pushToTalk);
   $('ptt-label').textContent=state.pushToTalk?'Nhấn Space để nói':'Open mic';
 }
+// Only the locally processed microphone track is sent over WebRTC.
+// YouTube audio is never captured or routed into this graph.
+async function prepareMicrophoneStream() {
+  const raw = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:false }, video:false,
+  });
+  state.rawStream = raw;
+  if (!window.AudioContext || !window.AudioWorkletNode) {
+    state.autoTuneSupported = false;
+    state.localStream = raw;
+    disableAutotune('Trình duyệt không hỗ trợ AudioWorklet; micro gửi giọng gốc.');
+    return;
+  }
+  let context;
+  try {
+    context = new AudioContext({ latencyHint:'interactive' });
+    if (!context.audioWorklet) throw new Error('AudioWorklet unavailable');
+    await context.audioWorklet.addModule('/autotune-processor.js');
+    const source = context.createMediaStreamSource(raw);
+    const processor = new AudioWorkletNode(context,'karaokeverse-autotune',{
+      outputChannelCount:[1],processorOptions:{settings:state.autoTuneSettings},
+    });
+    const destination = context.createMediaStreamDestination();
+    processor.port.onmessage = ({ data }) => {
+      if (data?.type !== 'pitch') return;
+      $('autotune-pitch').textContent = data.detected
+        ? `${data.detected} → ${data.target} (${data.cents > 0 ? '+' : ''}${data.cents} cent)`
+        : 'Đang chờ giọng hát rõ cao độ…';
+    };
+    source.connect(processor);
+    processor.connect(destination);
+    await context.resume();
+    if (context.state !== 'running') throw new Error('AudioContext cannot resume');
+    state.audioContext = context;
+    state.autoTuneNode = processor;
+    state.localStream = destination.stream;
+    state.autoTuneSupported = true;
+    $('autotune-status').textContent = 'Sẵn sàng • Hiệu ứng được gửi tới thành viên khác';
+  } catch (error) {
+    console.warn('AudioWorklet error, falling back to original microphone:',error);
+    if (context) await context.close().catch(()=>{});
+    state.audioContext = null;
+    state.autoTuneNode = null;
+    state.localStream = raw;
+    state.autoTuneSupported = false;
+    disableAutotune('Không khởi động được AudioWorklet; đang dùng micro gốc.');
+  }
+}
+function disableAutotune(message) {
+  state.autoTuneSettings.enabled = false;
+  $('autotune-toggle').checked = false;
+  $('autotune-toggle').disabled = true;
+  $('autotune-status').textContent = message;
+  $('autotune-pitch').textContent = 'Auto-Tune không khả dụng';
+  toast(message,5600);
+}
+function updateAutotuneUI() {
+  const c = state.autoTuneSettings;
+  $('autotune-toggle').checked = c.enabled;
+  $('autotune-key').value = String(c.key);
+  $('autotune-scale').value = c.scale;
+  $('autotune-strength').value = String(c.strength);
+  $('autotune-speed').value = String(c.retuneMs);
+  $('autotune-mix').value = String(c.mix);
+  $('autotune-strength-label').textContent = `${c.strength}%`;
+  $('autotune-speed-label').textContent = `${c.retuneMs} ms`;
+  $('autotune-mix-label').textContent = `${c.mix}%`;
+  $('autotune-badge').textContent = c.enabled ? 'ĐANG BẬT' : 'ĐANG TẮT';
+  $('autotune-badge').classList.toggle('is-on',c.enabled);
+}
+function saveAutotuneSettings() {
+  const settings = normalizeAutotune({
+    enabled: $('autotune-toggle').checked && state.autoTuneSupported,
+    key: Number($('autotune-key').value),
+    scale: $('autotune-scale').value,
+    strength: Number($('autotune-strength').value),
+    retuneMs: Number($('autotune-speed').value),
+    mix: Number($('autotune-mix').value),
+  });
+  state.autoTuneSettings = settings;
+  localStorage.setItem('karaokeverse-autotune',JSON.stringify(settings));
+  state.autoTuneNode?.port.postMessage({type:'configure',settings});
+  updateAutotuneUI();
+  if (settings.enabled && !state.localStream) $('autotune-status').textContent = 'Đã lưu cấu hình • Bật micro để sử dụng';
+  if (!settings.enabled) $('autotune-pitch').textContent = 'Auto-Tune đang tắt';
+}
 async function toggleMic(){
   if(!ensureRoom())return;
   if(state.isMicOn){state.isMicOn=false;setTransmitting(false);return;}
   if(!navigator.mediaDevices?.getUserMedia){toast('Micro cần HTTPS hoặc localhost và trình duyệt hỗ trợ.');return;}
   if(!state.localStream){
-    try{
-      state.localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
-    }catch(err){toast(err.name==='NotAllowedError'?'Bạn chưa cấp quyền sử dụng micro.':'Không thể truy cập micro. Kiểm tra thiết bị và quyền truy cập.');return;}
+    try { await prepareMicrophoneStream(); }
+    catch(err) {toast(err.name==='NotAllowedError'?'Bạn chưa cấp quyền sử dụng micro.':'Không thể truy cập micro. Kiểm tra thiết bị và quyền truy cập.');return;}
     for(const user of state.room.users)if(user.id!==state.myId)getPeer(user.id);
   }
+  try {if(state.audioContext?.state==='suspended') await state.audioContext.resume();}catch{}
   state.isMicOn=true;
   setTransmitting(!state.pushToTalk);
   for(const peer of state.peers.values())attachLocalTracks(peer);
-  // Most mobile browsers only allow remote audio to start after a user gesture.
+  // Remote streams are unlocked only after a user interaction in many browsers.
   for(const audio of document.querySelectorAll('audio[data-peer]'))audio.play().catch(()=>{});
   toast('🎤 Micro đã kết nối. Nên dùng tai nghe để tránh vọng âm.');
+}
+for (const name of NOTE_NAMES) {
+  const option = document.createElement('option');
+  option.value = String(NOTE_NAMES.indexOf(name));
+  option.textContent = name;
+  $('autotune-key').appendChild(option);
+}
+updateAutotuneUI();
+for (const id of ['autotune-toggle','autotune-key','autotune-scale','autotune-strength','autotune-speed','autotune-mix']) {
+  $(id).addEventListener('input',saveAutotuneSettings);
+  $(id).addEventListener('change',saveAutotuneSettings);
 }
 function togglePtt(){state.pushToTalk=!state.pushToTalk;if(state.isMicOn)setTransmitting(!state.pushToTalk);updateMicUI()}
 function pttKey(event,enabled){
@@ -548,7 +664,10 @@ for(const btn of document.querySelectorAll('[data-reaction]'))btn.addEventListen
 document.addEventListener('keydown',e=>pttKey(e,true));
 document.addEventListener('keyup',e=>pttKey(e,false));
 window.addEventListener('blur',()=>{if(state.pushToTalk)setTransmitting(false)});
-window.addEventListener('beforeunload',()=>state.localStream?.getTracks().forEach(t=>t.stop()));
+window.addEventListener('beforeunload',()=>{
+  state.localStream?.getTracks().forEach(t=>t.stop());
+  state.rawStream?.getTracks().forEach(t=>t.stop());
+});
 for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>{
   state.scene?.setView(btn.dataset.view);
 });

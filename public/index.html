@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0920"/>
   <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
-  <title>KaraokeVerse 3D v1.2 • Karaoke nhập vai</title>
+  <title>KaraokeVerse 3D v1.2.2 • Karaoke & Auto-Tune</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -70,6 +70,26 @@
           </div>
         </div>
         <div class="bottom-controls"><div class="ctrl-section"><button id="mic-button" class="control-btn" disabled><span class="control-icon">🎙</span><span id="mic-label">Bật micro</span></button><button id="ptt-button" class="control-btn" disabled title="Giữ phím Space để nói khi chế độ này được bật"><span class="control-icon">◉</span><span id="ptt-label">Open mic</span></button><button id="sound-button" class="control-btn"><span class="control-icon">🔈</span><span>Âm lượng</span></button><input id="voice-volume" aria-label="Âm lượng người khác" type="range" min="0" max="100" value="85"/></div><div class="ctrl-section"><button id="copy-room-bottom" class="control-btn accent-control" disabled>✉ Mời bạn bè</button></div></div>
+        <details class="autotune-panel" id="autotune-panel">
+          <summary><span>✨ AUTO-TUNE LAB</span><small id="autotune-badge">ĐANG TẮT</small><span class="autotune-chevron">⌄</span></summary>
+          <div class="autotune-controls">
+            <div class="autotune-info">
+              <label class="autotune-switch"><input type="checkbox" id="autotune-toggle"/><span>Bật chỉnh cao độ giọng hát</span></label>
+              <small id="autotune-status">Chọn chế độ rồi bật micro để áp dụng cho mọi người nghe</small>
+            </div>
+            <div class="autotune-pair">
+              <label>Tông (Key)<select id="autotune-key" aria-label="Tông bài hát"></select></label>
+              <label>Âm giai (Scale)<select id="autotune-scale" aria-label="Âm giai"><option value="chromatic">Chromatic • 12 nốt</option><option value="major">Trưởng (Major)</option><option value="minor">Thứ (Minor)</option><option value="pentatonic">Ngũ cung (Pentatonic)</option></select></label>
+            </div>
+            <div class="autotune-sliders">
+              <label><span>Độ mạnh <b id="autotune-strength-label">85%</b></span><input id="autotune-strength" type="range" min="0" max="100" step="5" value="85"/></label>
+              <label><span>Tốc độ hiệu chỉnh <b id="autotune-speed-label">85 ms</b></span><input id="autotune-speed" type="range" min="15" max="250" step="5" value="85"/></label>
+              <label><span>Tỷ lệ hiệu ứng <b id="autotune-mix-label">100%</b></span><input id="autotune-mix" type="range" min="0" max="100" step="5" value="100"/></label>
+            </div>
+            <div class="autotune-pitch"><span>Giọng được nhận diện</span><b id="autotune-pitch">Chưa nhận diện cao độ</b></div>
+            <p class="autotune-note">⚠ Hiệu ứng beta dành cho giọng hát đơn âm. Có thể bị méo/giật cao độ hoặc tăng độ trễ. Chọn đúng Key/Scale; dùng tai nghe. Không phân tích âm thanh YouTube, không có chức năng nghe thử trực tiếp để tránh vọng âm.</p>
+          </div>
+        </details>
       </section>
       <aside id="social-panel" class="panel social-panel">
         <div class="right-heading"><div><span class="eyebrow">YOUR PARTY</span><h2>Thành viên <span id="members-count">(0)</span></h2></div><span class="sparkle">✧</span></div>
@@ -80,7 +100,7 @@
         <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
       </aside>
     </main>
-    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.1 • FIXED INTERACTIONS</span></footer>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.2 • AUTO-TUNE LAB</span></footer>
   </div>
   <div id="welcome-screen" class="modal-layer">
     <div class="welcome-glow"></div>

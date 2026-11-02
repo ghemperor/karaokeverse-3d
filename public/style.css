@@ -57,3 +57,20 @@
 @media(pointer:coarse){.is-following .scene-mobile-pad{display:grid}}
 .is-following .scene-action{display:block}
 .is-following .scene-action:not(.show){display:none}
+
+/* v1.2.2: microphone pitch correction settings */
+.autotune-panel{margin:8px 2px 0;background:linear-gradient(125deg,#21152f,#16162b);border:1px solid #64437e;border-radius:12px;color:#ede6ff;overflow:hidden;flex-shrink:0}
+.autotune-panel summary{display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 15px;font-size:12px;font-weight:900;list-style:none;letter-spacing:.35px}
+.autotune-panel summary::-webkit-details-marker{display:none}.autotune-chevron{margin-left:auto;font-size:19px;color:#a896ca}.autotune-panel[open] .autotune-chevron{transform:rotate(180deg)}
+#autotune-badge{font-size:9px;background:#2d2643;color:#b0a9c9;border:1px solid #5e5276;border-radius:6px;padding:4px 7px;letter-spacing:.3px}
+#autotune-badge.is-on{color:#7af5ce;background:#123a32;border-color:#418e77}
+.autotune-controls{padding:3px 15px 15px;display:grid;gap:12px;border-top:1px solid #ffffff16}
+.autotune-info{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:12px}.autotune-info small{font-size:10px;color:#a9a4bc}
+.autotune-switch{display:flex;align-items:center;gap:8px;font-weight:750;font-size:12px;cursor:pointer}.autotune-switch input{accent-color:#b879ff;width:17px;height:17px}
+.autotune-pair{display:grid;grid-template-columns:1fr 1.4fr;gap:11px}.autotune-pair label{display:grid;gap:5px;font-size:10px;color:#b4a8d2;font-weight:800}
+.autotune-pair select{min-width:0;background:#110d24;border:1px solid #5b477c;color:#faf6ff;border-radius:8px;padding:8px;font-size:12px}
+.autotune-sliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.autotune-sliders label{display:grid;gap:8px;min-width:0}.autotune-sliders label span{display:flex;justify-content:space-between;gap:5px;font-size:10px;color:#ae9fc7}.autotune-sliders b{font-weight:800;color:#f7d9ff;white-space:nowrap}.autotune-sliders input{width:100%;accent-color:#c974f5}
+.autotune-pitch{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#121222;border:1px solid #383352;border-radius:8px;padding:8px 11px;font-size:10px;color:#9890b1}.autotune-pitch b{color:#d9bdff;font-size:11px}.autotune-note{font-size:10px;color:#9f96b5;line-height:1.55;margin:0}
+@media(max-width:690px){.autotune-pair,.autotune-sliders{grid-template-columns:1fr}.autotune-controls{gap:10px}.autotune-info{align-items:flex-start}.autotune-pitch{align-items:flex-start;flex-direction:column;gap:4px}}
+/* Expanded effect controls must remain reachable without cropping the stage. */
+.center-stage{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
