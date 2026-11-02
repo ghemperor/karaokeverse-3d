@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0b0920"/>
+  <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
+  <title>KaraokeVerse 3D v1.2 • Karaoke nhập vai</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-icon">♫</div><div><b>KARAOKE<span>VERSE</span></b><small>YOUR STAGE. YOUR PEOPLE.</small></div></div>
+      <div class="top-center"><span class="live-dot"></span> KARAOKE PARTY ONLINE <span class="top-div"></span><span id="status-label">Chưa tham gia phòng</span></div>
+      <div class="top-actions">
+        <div id="room-badge" class="room-badge" title="Mã phòng">ROOM <b>------</b></div>
+        <button class="subtle-button" id="copy-invite" disabled>↗ <span>Mời bạn bè</span></button>
+        <button class="icon-button" id="leave-room" title="Rời phòng" disabled>⏻</button>
+      </div>
+    </header>
+    <main class="workspace">
+      <aside id="songs-panel" class="panel songs-panel">
+        <div class="panel-heading"><div><span class="eyebrow">PLAYLIST</span><h2>Danh sách bài hát</h2></div><span id="queue-count" class="count-chip">0 bài</span></div>
+        <form id="add-song-form" class="song-input-wrap">
+          <label for="song-url">THÊM BÀI HÁT</label>
+          <div class="input-border"><span>▶</span><input id="song-url" type="url" placeholder="Dán link YouTube vào đây..." required autocomplete="off" disabled/></div>
+          <button id="add-song" class="gradient-button" type="submit" disabled>＋ Thêm vào danh sách</button>
+        </form>
+        <div class="playlist-head"><span>HÀNG CHỜ PHÁT</span><span>♪</span></div>
+        <div id="song-list" class="songs-scroll"><div class="empty-state"><span class="empty-icon">♫</span><b>Chưa có bài hát</b><p>Thêm link YouTube để bắt đầu bữa tiệc âm nhạc.</p></div></div>
+        <div class="tip"><span>✦</span><p>Video được phát từ trình nhúng YouTube. Một số video có thể không cho phép phát trên website khác.</p></div>
+      </aside>
+      <section class="center-stage">
+        <div class="stage-head"><div class="breadcrumb"><span class="stage-live">● LIVE ROOM</span><span class="slash">/</span><span id="stage-room-name">The Neon Lounge</span></div><div class="camera-options"><button class="camera-button active" data-view="front">◉ Sân khấu</button><button class="camera-button" data-view="wide">▦ Toàn phòng</button><button class="camera-button" data-view="orbit">⟳ Xoay 360°</button><button class="camera-button" data-view="walk">◉ Góc mắt</button><button class="camera-button" data-view="follow">♙ Theo nhân vật</button><button class="camera-button" data-view="tv">▣ Xem TV</button></div></div>
+        <div class="stage-scene" id="stage-scene">
+          <div id="scene-webgl" class="scene-layer"></div>
+          <div id="scene-css3d" class="scene-layer scene-css3d"></div>
+          <div id="scene-fallback" class="scene-fallback hidden"><div class="fallback-stage"><span>♫</span><h2>THE NEON LOUNGE</h2><p>Không tải được thư viện 3D. Hãy kiểm tra kết nối Internet.</p></div></div>
+          <div class="stage-top-overlay"><div class="scene-chip"><span class="dot-green"></span> <span id="scene-status">Đang chờ</span></div><div class="scene-chip">♬ <span id="scene-people">0/8 người</span></div></div>
+          <div class="scene-hud" aria-live="polite">
+            <div class="scene-guide" id="scene-guide">Nhấp “Nhập vai” để tự do khám phá phòng bằng WASD</div>
+            <div class="scene-aim" id="scene-aim" aria-hidden="true"><span></span></div>
+            <div class="scene-target" id="scene-target-hint"></div>
+            <button id="scene-action" class="scene-action" type="button" title="Tương tác với đồ vật">✋ Tương tác</button>
+            <div class="scene-mobile-pad" id="scene-mobile-pad" aria-label="Điều khiển di chuyển">
+              <button type="button" data-move="forward" class="pad-up" aria-label="Đi tới">↑</button>
+              <button type="button" data-move="left" class="pad-left" aria-label="Đi trái">←</button>
+              <button type="button" data-move="back" class="pad-down" aria-label="Đi lùi">↓</button>
+              <button type="button" data-move="right" class="pad-right" aria-label="Đi phải">→</button>
+            </div>
+          </div>
+          <button id="scene-fullscreen" class="scene-fullscreen" type="button" aria-label="Bật hoặc tắt toàn màn hình" title="Toàn màn hình (phím F)">⛶ <span>Toàn màn hình</span></button>
+          <button id="unlock-video" class="video-unlock" title="Cho phép trình duyệt phát video YouTube">▶ Bật video</button>
+          <div class="stage-bottom-overlay"><div class="song-now-icon">♫</div><div><div class="mini-heading">NOW PLAYING</div><b id="now-title">Sân khấu đang chờ bạn...</b><small id="now-subtitle">Thêm bài hát YouTube để bắt đầu</small></div></div>
+        </div>
+        <div class="player-bar"><div class="player-left"><span class="sound-wave">▂▅▃▇▅</span><div><strong id="player-title">Chưa phát bài hát</strong><small id="player-caption">Chủ phòng có thể điều khiển bài hát</small></div></div><div class="player-controls"><button id="control-play" class="play-main" title="Phát/Tạm dừng" disabled>▶</button><button id="control-next" class="transport-btn" title="Bài tiếp theo" disabled>⏭</button></div><div class="player-right"><span id="time-current">00:00</span><input id="video-seek" type="range" min="0" max="100" step="1" value="0" disabled aria-label="Tua video"/><span id="time-total">--:--</span></div></div>
+        <div class="party-console" aria-label="Điều khiển hoạt động trong phòng">
+          <div class="party-status"><span class="party-live">● LIVE STAGE</span><b id="singer-label">Chưa có người biểu diễn</b><span id="singer-queue">Hàng chờ: 0</span></div>
+          <div class="party-buttons">
+            <button class="party-btn primary" id="stage-request" disabled>🎤 Đăng ký hát</button>
+            <button class="party-btn" id="stage-leave" disabled>↪ Rời lượt</button>
+            <button class="party-btn" id="stage-next" disabled>⏭ Chuyển lượt</button>
+            <button class="party-btn" data-emote="wave" disabled>👋 Chào</button>
+            <button class="party-btn" data-emote="clap" disabled>👏 Vỗ tay</button>
+            <button class="party-btn" data-emote="dance" disabled>💃 Nhảy</button>
+            <button class="party-btn" data-emote="stand" disabled>🧍 Đứng</button>
+            <button class="party-btn" id="party-light" disabled>💡 Đèn</button>
+            <button class="party-btn" id="party-mode" disabled>🪩 Party mode</button>
+          </div>
+        </div>
+        <div class="bottom-controls"><div class="ctrl-section"><button id="mic-button" class="control-btn" disabled><span class="control-icon">🎙</span><span id="mic-label">Bật micro</span></button><button id="ptt-button" class="control-btn" disabled title="Giữ phím Space để nói khi chế độ này được bật"><span class="control-icon">◉</span><span id="ptt-label">Open mic</span></button><button id="sound-button" class="control-btn"><span class="control-icon">🔈</span><span>Âm lượng</span></button><input id="voice-volume" aria-label="Âm lượng người khác" type="range" min="0" max="100" value="85"/></div><div class="ctrl-section"><button id="copy-room-bottom" class="control-btn accent-control" disabled>✉ Mời bạn bè</button></div></div>
+      </section>
+      <aside id="social-panel" class="panel social-panel">
+        <div class="right-heading"><div><span class="eyebrow">YOUR PARTY</span><h2>Thành viên <span id="members-count">(0)</span></h2></div><span class="sparkle">✧</span></div>
+        <div id="member-list" class="member-list"><div class="member-empty">Tạo hoặc vào phòng để gặp mọi người.</div></div>
+        <div class="chat-title"><span>CHAT TRỰC TIẾP</span><span class="chat-online">● ONLINE</span></div>
+        <div id="chat-messages" class="chat-messages"><div class="chat-welcome">👋 Chào mừng đến KaraokeVerse! Tạo phòng và mời bạn bè cùng hát nhé.</div></div>
+        <div class="reactions"><button data-reaction="👏" title="Vỗ tay" disabled>👏</button><button data-reaction="❤️" title="Yêu thích" disabled>❤️</button><button data-reaction="🔥" title="Tuyệt vời" disabled>🔥</button><button data-reaction="🎉" title="Ăn mừng" disabled>🎉</button><button data-reaction="🎤" title="Đến lượt bạn!" disabled>🎤</button></div>
+        <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
+      </aside>
+    </main>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.1 • FIXED INTERACTIONS</span></footer>
+  </div>
+  <div id="welcome-screen" class="modal-layer">
+    <div class="welcome-glow"></div>
+    <div class="welcome-modal"><div class="welcome-icon">♫</div><div class="overline">THE STAGE IS YOURS</div><h1>Hát hết mình.<br/><em>Chill hết nấc.</em></h1><p>Phòng karaoke 3D dành cho hội bạn thân. Xem YouTube, bật micro và hát cùng nhau mọi lúc mọi nơi.</p>
+      <label class="field-label" for="name-input">BẠN MUỐN MỌI NGƯỜI GỌI LÀ GÌ?</label>
+      <input id="name-input" maxlength="26" placeholder="Nhập biệt danh của bạn..." autocomplete="nickname"/>
+      <label class="field-label">CHỌN AVATAR</label><div class="avatar-picker" id="avatar-picker"></div>
+      <div class="welcome-actions"><button class="gradient-button" id="create-room">✦ Tạo phòng mới</button><div class="or-divider">hoặc tham gia bằng mã</div><div class="join-inline"><input id="join-code" maxlength="8" placeholder="Mã phòng 6 ký tự" autocomplete="off"/><button id="join-room">Tham gia →</button></div></div>
+      <small>🎧 Nên sử dụng tai nghe để hạn chế tiếng vọng khi bật micro.</small>
+    </div>
+  </div>
+  <div id="toast-stack" aria-live="polite"></div>
+  <div id="reaction-layer" aria-hidden="true"></div>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
