@@ -1,3 +1,20 @@
+# Deploy KaraokeVerse v1.2.3 – Karaoke Mixer Pro
+
+- Upload toàn bộ nội dung ZIP lên GitHub và xác minh có `public/audio-mixer.js`, `public/app.js`, `public/index.html`, `public/style.css`, `public/autotune-processor.js`, `lib/`.
+- Trên Render giữ dịch vụ Web Service Node.js hiện tại, **không xóa** các biến `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD`. Không tải các file `.env` có mật khẩu lên GitHub.
+- Commit lên nhánh đang kết nối với Render (thường `main`), sau đó theo dõi Events/Logs để thấy deploy mới Live. Nếu không tự chạy, Manual Deploy → Deploy latest commit.
+- Tải mới website bằng Ctrl+Shift+R. Kiểm tra có mục **🎚 MIXER KARAOKE PRO** nằm trên Auto-Tune Lab.
+- Tạo phòng với 2 thiết bị ở 2 mạng khác nhau, dùng tai nghe; bật micro. Người kia phải nghe giọng sau xử lý Echo/Reverb.
+- Kiểm tra âm lượng video YouTube trên mỗi thiết bị; đổi preset không ảnh hưởng đến nhạc Youtube, chỉ micro gửi đi.
+- Nếu browser không hiện thiết bị loa, dùng thiết bị mặc định hệ thống. `setSinkId()` không điều khiển đầu ra YouTube iframe.
+- Để bảo mật, thay credential TURN đã từng xuất hiện trong ảnh/chat; với production nên dùng credential ngắn hạn thay vì password cố định trong `/config`.
+- Local Windows: `CHAY-TREN-WINDOWS.bat` (port 3002) hoặc `CHAY-TREN-WINDOWS.bat 3003`.
+
+## Kiểm thử
+Chạy `npm run check` và kiểm tra trong Chrome/Edge. Bộ test DSP không thay thế kiểm thử tai nghe và kết nối hai người thật.
+
+---
+
 # Cập nhật KaraokeVerse v1.2.2 có Auto-Tune lên GitHub / Render
 
 Đây là bản nâng cấp của gói deploy v1.2.1, không phải dự án khác. Nếu bạn đã kết nối GitHub với Render, hãy thay thế/cập nhật **các file cùng đường dẫn** trong repository hiện tại (lưu ý **upload đầy đủ thư mục `lib/`**; đây là thư mục `server.js` đang import và trước đó từng bị thiếu).

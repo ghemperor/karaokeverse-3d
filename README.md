@@ -1,4 +1,33 @@
-# KaraokeVerse 3D v1.2.2 — Auto-Tune Lab (beta)
+# KaraokeVerse 3D v1.2.3 — Karaoke Mixer Pro + Auto-Tune (beta)
+
+## Nâng cấp 1.2.3: Bàn mixer karaoke chuyên nghiệp
+
+- **Micro:** gain ±12 dB, EQ Bass/Mid/Treble ±12 dB, compressor, âm lượng micro gửi đi.
+- **Echo:** thời gian trễ 70–600 ms, độ lặp feedback giới hạn 0–55%, âm lượng echo 0–60%.
+- **Reverb:** 3 kiểu phòng (nhỏ/vừa/hội trường) và mức vang 0–60%. Reverb tổng hợp từ impulse response 2 kênh.
+- **5 preset giọng hát:** Tự nhiên, Ballad, Bolero, Pop/EDM, Trò chuyện; tùy chỉnh trực tiếp và tự lưu trên trình duyệt.
+- **Loa/nhạc:** điều chỉnh riêng âm lượng video YouTube (tại máy người nghe) và voice chat nhận từ người khác. Có lựa chọn loa/headphone *cho luồng voice chat WebRTC*, phụ thuộc vào khả năng `HTMLMediaElement.setSinkId()` của trình duyệt. YouTube iframe không đổi loa riêng qua giao diện này.
+- **Chọn micro đầu vào:** có thể đổi micro khi đang hát, sử dụng `replaceTrack` để giữ kết nối WebRTC.
+- **Nghe thử mic qua tai nghe** mặc định TẮT; bật có thể hú/rít nếu dùng loa ngoài.
+- **Âm thanh xử lý gửi sang thành viên khác:** `getUserMedia → Auto-Tune AudioWorklet (nếu có) → EQ → compressor → dry + echo + reverb → limiter → MediaStreamDestination → WebRTC`. Không lấy, ghi lại hay xử lý audio từ YouTube.
+- **Tương thích:** Khi Auto-Tune AudioWorklet không khả dụng, các hiệu ứng còn lại vẫn hoạt động qua Web Audio; nếu Web Audio không khả dụng, micro gốc được gửi đi với thông báo.
+- **Tất cả mức chỉnh mixer là cài đặt cá nhân** và không thay đổi âm thanh micro của người khác, không lưu trên server.
+
+### Cách sử dụng
+
+1. Vào phòng và mở **🎚 MIXER KARAOKE PRO** phía dưới nút micro.
+2. Chọn preset Ballad / Bolero / Pop hoặc tự kéo thanh Bass/Mid/Treble, Echo, Reverb.
+3. Chọn micro và loa (nếu trình duyệt cho phép), rồi bật micro (Open Mic).
+4. Nhờ thành viên khác nghe thử và phản hồi vì chế độ tự nghe micro mặc định tắt để tránh hú.
+5. Chọn âm lượng Nhạc YouTube và Giọng bạn bè riêng cho thiết bị của bạn.
+
+**Lưu ý:** Echo và Reverb có thể tăng cảm nhận độ trễ/tiếng vọng. Hãy dùng tai nghe, bắt đầu với Echo Mix khoảng 10–25%, Feedback dưới 30%, Reverb dưới 25%. Đây là bộ effect dựa trên Web Audio, không phải thiết bị DSP chuyên nghiệp hay tính năng tách vocal/nhạc của YouTube. Việc chọn loa đầu ra có thể không được hỗ trợ trên Safari và một số trình duyệt.
+
+**Deploy:** Thay *toàn bộ* nội dung bản v1.2.2 trên GitHub bằng gói v1.2.3, trong đó bắt buộc có `public/audio-mixer.js` cùng `public/app.js`, `public/index.html`, `public/style.css`. Giữ nguyên các biến TURN trong Render. Commit trên nhánh kết nối; Auto Deploy On Commit sẽ tạo bản mới.
+
+---
+
+# Ghi chú từ v1.2.2 — Auto-Tune Lab (beta)
 
 Phiên bản nâng cấp từ **v1.2.1-deploy**, giữ nguyên không gian 3D Three.js, nhân vật, phòng online, hàng chờ YouTube, chat, Socket.IO, voice chat WebRTC và sửa lỗi cầm micro / đứng dậy gần ghế.
 

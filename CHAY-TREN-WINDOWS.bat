@@ -11,7 +11,7 @@ if not "%~1"=="" set "PORT=%~1"
 if not defined PORT set "PORT=3002"
 echo.
 echo ==================================================
-echo   KARAOKEVERSE 3D v1.2.2 -- AUTO-TUNE LAB
+echo   KARAOKEVERSE 3D v1.2.3 -- KARAOKE MIXER PRO
  echo ==================================================
 echo Su dung cong PORT=%PORT%
 echo Neu cong dang ban, chay: CHAY-TREN-WINDOWS.bat 3003

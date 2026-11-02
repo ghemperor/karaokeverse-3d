@@ -1,8 +1,13 @@
 import { AUTOTUNE_DEFAULTS, NOTE_NAMES, normalizeAutotune } from './autotune-math.js';
+import { MIXER_DEFAULTS, MIXER_RANGES, normalizeMixer, presetMixer, createKaraokeMixer } from './audio-mixer.js';
 
 const $ = (id) => document.getElementById(id);
 const AVATARS = ['😎','🤩','🥳','🦊','🐱','🐼','👽','🐻'];
 const socket = window.io({ reconnection: true, reconnectionAttempts: 10 });
+function loadMixerSettings() {
+  try { return normalizeMixer(JSON.parse(localStorage.getItem('karaokeverse-mixer') || '{}')); }
+  catch { return { ...MIXER_DEFAULTS }; }
+}
 function loadAutotuneSettings() {
   try { return normalizeAutotune(JSON.parse(localStorage.getItem('karaokeverse-autotune') || '{}')); }
   catch { return { ...AUTOTUNE_DEFAULTS }; }
@@ -19,6 +24,10 @@ const state = {
   localStream: null,
   rawStream: null,
   audioContext: null,
+  mixer: null,
+  mixerSettings: loadMixerSettings(),
+  inputDeviceId: '',
+  speakerSinkId: '',
   autoTuneNode: null,
   autoTuneSupported: true,
   autoTuneSettings: loadAutotuneSettings(),
@@ -123,7 +132,8 @@ function resetAndLeave(showToast=true){
   state.rawStream?.getTracks().forEach(t => t.stop());
   state.autoTuneNode?.disconnect();
   state.audioContext?.close().catch(() => {});
-  state.localStream=null;state.rawStream=null;state.autoTuneNode=null;state.audioContext=null;
+  state.localStream=null;state.rawStream=null;state.autoTuneNode=null;state.audioContext=null;state.mixer=null;
+  $('mixer-status').textContent='Bật micro để kích hoạt bộ xử lý.';
   state.isMicOn=false;state.transmitting=false;
   $('autotune-pitch').textContent = 'Chưa nhận diện cao độ';
   state.myId=null;state.room=null;state.lastSingerId=null;state.currentVideoId=null;state.pendingSignals=[];
@@ -311,7 +321,7 @@ function createYoutubePlayer(){
     width:'640',height:'360',
     playerVars:{playsinline:1,controls:1,rel:0,origin:location.origin},
     events:{
-      onReady:()=>{state.youtubeReady=true;syncYoutube();toast('▶ Trình phát YouTube đã sẵn sàng.');},
+      onReady:()=>{state.youtubeReady=true;applyMusicVolume();syncYoutube();toast('▶ Trình phát YouTube đã sẵn sàng.');},
       onError:(event)=>{const codes={2:'Link video không hợp lệ',5:'Trình duyệt không phát được video',100:'Video không tồn tại',101:'Chủ video không cho phép nhúng',150:'Chủ video không cho phép nhúng'};toast('YouTube: '+(codes[event.data]||`Lỗi ${event.data}`),5000);},
       onStateChange:(event)=>{
         if(event.data===0 && roomHost() && state.room?.player?.videoId)runPlayerCommand('next');
@@ -349,7 +359,8 @@ function getPeer(remoteId){
       if(!(audio.srcObject instanceof MediaStream))audio.srcObject=new MediaStream();
       audio.srcObject.addTrack(track);
     }
-    audio.volume=Number($('voice-volume').value)/100;
+    audio.volume=state.mixerSettings.voiceVolume/100;
+    applySpeakerSink(audio);
     audio.play().catch(()=>toast('Nhấn Bật micro hoặc tương tác với trang để nghe giọng nói.',4600));
   };
   pc.onnegotiationneeded=async()=>{
@@ -417,53 +428,69 @@ function updateMicUI(){
   $('ptt-button').classList.toggle('active',state.pushToTalk);
   $('ptt-label').textContent=state.pushToTalk?'Nhấn Space để nói':'Open mic';
 }
-// Only the locally processed microphone track is sent over WebRTC.
-// YouTube audio is never captured or routed into this graph.
+// Processed local microphone audio is the ONLY stream sent into WebRTC.
+// YouTube stays in its official iframe; it cannot be tapped into this DSP graph.
 async function prepareMicrophoneStream() {
-  const raw = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:false }, video:false,
-  });
-  state.rawStream = raw;
-  if (!window.AudioContext || !window.AudioWorkletNode) {
-    state.autoTuneSupported = false;
-    state.localStream = raw;
-    disableAutotune('Trình duyệt không hỗ trợ AudioWorklet; micro gửi giọng gốc.');
+  const audioConstraints={echoCancellation:true,noiseSuppression:true,autoGainControl:false};
+  if(state.inputDeviceId) audioConstraints.deviceId={ideal:state.inputDeviceId};
+  const raw=await navigator.mediaDevices.getUserMedia({audio:audioConstraints,video:false});
+  state.rawStream=raw;
+  if(!window.AudioContext){
+    state.autoTuneSupported=false;
+    state.localStream=raw;
+    $('mixer-status').textContent='Trình duyệt không có Web Audio API; đang gửi giọng gốc.';
+    disableAutotune('Trình duyệt không hỗ trợ Web Audio API; micro gửi giọng gốc.');
     return;
   }
   let context;
-  try {
-    context = new AudioContext({ latencyHint:'interactive' });
-    if (!context.audioWorklet) throw new Error('AudioWorklet unavailable');
-    await context.audioWorklet.addModule('/autotune-processor.js');
-    const source = context.createMediaStreamSource(raw);
-    const processor = new AudioWorkletNode(context,'karaokeverse-autotune',{
-      outputChannelCount:[1],processorOptions:{settings:state.autoTuneSettings},
-    });
-    const destination = context.createMediaStreamDestination();
-    processor.port.onmessage = ({ data }) => {
-      if (data?.type !== 'pitch') return;
-      $('autotune-pitch').textContent = data.detected
-        ? `${data.detected} → ${data.target} (${data.cents > 0 ? '+' : ''}${data.cents} cent)`
-        : 'Đang chờ giọng hát rõ cao độ…';
-    };
-    source.connect(processor);
-    processor.connect(destination);
+  try{
+    context=new AudioContext({latencyHint:'interactive'});
+    const source=context.createMediaStreamSource(raw);
+    let input=source;
+    let processor=null;
+    // Mixer works even on browsers without AudioWorklet (just Auto-Tune is off).
+    if(window.AudioWorkletNode && context.audioWorklet){
+      try{
+        await context.audioWorklet.addModule('/autotune-processor.js');
+        processor=new AudioWorkletNode(context,'karaokeverse-autotune',{
+          outputChannelCount:[1],processorOptions:{settings:state.autoTuneSettings},
+        });
+        processor.port.onmessage=({data})=>{
+          if(data?.type!=='pitch')return;
+          $('autotune-pitch').textContent=data.detected
+            ? `${data.detected} → ${data.target} (${data.cents>0?'+':''}${data.cents} cent)`
+            : 'Đang chờ giọng hát rõ cao độ…';
+        };
+        source.connect(processor);
+        input=processor;
+      }catch(err){console.warn('Auto-Tune worklet not available; mixer continues:',err);}
+    }
+    if(!processor){
+      state.autoTuneSupported=false;
+      disableAutotune('Không tải được Auto-Tune; Mixer vẫn hoạt động với micro gốc.');
+    }else{
+      state.autoTuneSupported=true;
+      $('autotune-toggle').disabled=false;
+      $('autotune-status').textContent='Sẵn sàng • Auto-Tune và mixer được gửi tới thành viên khác';
+    }
+    const mixer=createKaraokeMixer(context,input,state.mixerSettings);
     await context.resume();
-    if (context.state !== 'running') throw new Error('AudioContext cannot resume');
-    state.audioContext = context;
-    state.autoTuneNode = processor;
-    state.localStream = destination.stream;
-    state.autoTuneSupported = true;
-    $('autotune-status').textContent = 'Sẵn sàng • Hiệu ứng được gửi tới thành viên khác';
-  } catch (error) {
-    console.warn('AudioWorklet error, falling back to original microphone:',error);
-    if (context) await context.close().catch(()=>{});
-    state.audioContext = null;
-    state.autoTuneNode = null;
-    state.localStream = raw;
-    state.autoTuneSupported = false;
-    disableAutotune('Không khởi động được AudioWorklet; đang dùng micro gốc.');
+    if(context.state!=='running')throw new Error('Cannot start AudioContext');
+    state.audioContext=context;
+    state.autoTuneNode=processor;
+    state.mixer=mixer;
+    state.localStream=mixer.stream;
+    $('mixer-status').textContent='Đang xử lý giọng micro • Người khác sẽ nghe hiệu ứng';
+  }catch(error){
+    console.warn('Web Audio mixer error, falling back to raw mic:',error);
+    if(context)await context.close().catch(()=>{});
+    state.audioContext=null;state.autoTuneNode=null;state.mixer=null;
+    state.localStream=raw;
+    state.autoTuneSupported=false;
+    $('mixer-status').textContent='Không khởi tạo được bộ xử lý; đang gửi micro gốc.';
+    disableAutotune('Không khởi tạo được bộ xử lý; micro gửi giọng gốc.');
   }
+  refreshAudioDevices().catch(()=>{});
 }
 function disableAutotune(message) {
   state.autoTuneSettings.enabled = false;
@@ -518,7 +545,7 @@ async function toggleMic(){
   for(const peer of state.peers.values())attachLocalTracks(peer);
   // Remote streams are unlocked only after a user interaction in many browsers.
   for(const audio of document.querySelectorAll('audio[data-peer]'))audio.play().catch(()=>{});
-  toast('🎤 Micro đã kết nối. Nên dùng tai nghe để tránh vọng âm.');
+  toast('🎤 Micro đã kết nối. Mixer được áp dụng cho giọng gửi đi; nên dùng tai nghe.');
 }
 for (const name of NOTE_NAMES) {
   const option = document.createElement('option');
@@ -531,6 +558,149 @@ for (const id of ['autotune-toggle','autotune-key','autotune-scale','autotune-st
   $(id).addEventListener('input',saveAutotuneSettings);
   $(id).addEventListener('change',saveAutotuneSettings);
 }
+// Karaoke sound desk: persistent personal settings, applied live without
+// renegotiating WebRTC or touching the official YouTube audio stream.
+const mixerKeys=Object.keys(MIXER_RANGES);
+const mixerUnits={inputGain:'dB',bass:'dB',mid:'dB',treble:'dB',echoTime:'ms'};
+function mixerValueText(key,value){
+  const unit=mixerUnits[key]||'%';
+  return (unit==='dB'&&value>0?'+':'')+value+(unit==='dB'?' dB':unit==='ms'?' ms':'%');
+}
+function renderMixerUI(){
+  const settings=state.mixerSettings;
+  $('mixer-preset').value=settings.preset;
+  for(const key of mixerKeys){
+    $('mix-'+key).value=String(settings[key]);
+    $('mix-'+key+'-value').textContent=mixerValueText(key,settings[key]);
+  }
+  $('mix-reverbRoom').value=settings.reverbRoom;
+  $('mix-monitor').checked=settings.monitor;
+  $('voice-volume').value=String(settings.voiceVolume);
+  $('mixer-badge').textContent=state.mixer?'ĐANG XỬ LÝ':'SẴN SÀNG';
+}
+function applyMusicVolume(){
+  if(!state.youtubeReady||!state.youtube)return;
+  try{state.youtube.setVolume(state.mixerSettings.musicVolume)}catch(err){console.warn('YouTube volume:',err)}
+}
+function applySpeakerSink(audio){
+  if(!state.speakerSinkId||typeof audio.setSinkId!=='function')return;
+  audio.setSinkId(state.speakerSinkId).catch(err=>{
+    console.warn('Speaker output switch:',err);
+    toast('Không chuyển được loa. Trình duyệt có thể không cho phép chọn đầu ra âm thanh.');
+  });
+}
+function persistMixer(){
+  localStorage.setItem('karaokeverse-mixer',JSON.stringify(state.mixerSettings));
+  state.mixer?.applySettings(state.mixerSettings);
+  applyMusicVolume();
+  for(const audio of document.querySelectorAll('audio[data-peer]'))audio.volume=state.mixerSettings.voiceVolume/100;
+  renderMixerUI();
+}
+async function refreshAudioDevices(){
+  if(!navigator.mediaDevices?.enumerateDevices)return;
+  const devices=await navigator.mediaDevices.enumerateDevices();
+  for(const [selectId,type,selected,defaultLabel] of [
+    ['mixer-input','audioinput',state.inputDeviceId,'Micro mặc định hệ thống'],
+    ['mixer-speaker','audiooutput',state.speakerSinkId,'Loa mặc định hệ thống'],
+  ]){
+    const select=$(selectId);
+    select.replaceChildren();
+    const defaultOption=document.createElement('option');
+    defaultOption.value='';defaultOption.textContent=defaultLabel;select.appendChild(defaultOption);
+    for(const [index,device] of devices.filter(d=>d.kind===type && d.deviceId!=='default').entries()){
+      const option=document.createElement('option');
+      option.value=device.deviceId;option.textContent=device.label||`${type==='audioinput'?'Micro':'Loa'} ${index+1}`;
+      select.appendChild(option);
+    }
+    if([...select.options].some(opt=>opt.value===selected))select.value=selected;
+    else if(selected)select.value='';
+  }
+  const canSelectSpeaker=typeof HTMLMediaElement.prototype.setSinkId==='function';
+  $('mixer-speaker').disabled=!canSelectSpeaker;
+  $('mixer-speaker').title=canSelectSpeaker?'Chỉ áp dụng cho giọng nói từ người khác':'Trình duyệt chưa hỗ trợ chọn loa bằng setSinkId';
+}
+// Replacing a microphone device does not kick other participants out.
+async function changeMicDevice(nextDeviceId){
+  if(nextDeviceId===state.inputDeviceId)return;
+  const previousId=state.inputDeviceId;
+  state.inputDeviceId=nextDeviceId;
+  if(!state.rawStream){return;}
+  const old={rawStream:state.rawStream,localStream:state.localStream,audioContext:state.audioContext,
+    autoTuneNode:state.autoTuneNode,mixer:state.mixer};
+  state.rawStream=null;state.localStream=null;state.audioContext=null;state.autoTuneNode=null;state.mixer=null;
+  try{
+    await prepareMicrophoneStream();
+    const track=state.localStream.getAudioTracks()[0];
+    await Promise.all([...state.peers.values()].map(async peer=>{
+      const sender=peer.pc.getSenders().find(s=>s.track?.kind==='audio');
+      if(sender)await sender.replaceTrack(track);
+      else{peer.tracksAttached=false;attachLocalTracks(peer);}
+    }));
+    old.rawStream?.getTracks().forEach(t=>t.stop());
+    if(old.localStream!==old.rawStream)old.localStream?.getTracks().forEach(t=>t.stop());
+    old.audioContext?.close().catch(()=>{});
+    setTransmitting(!state.pushToTalk&&state.isMicOn);
+    toast('Đã chuyển thiết bị micro.');
+  }catch(err){
+    console.error('Microphone device change failed:',err);
+    // Roll back senders already switched, before destroying their new track.
+    const oldTrack=old.localStream?.getAudioTracks()?.[0];
+    if(oldTrack)await Promise.allSettled([...state.peers.values()].map(async peer=>{
+      const sender=peer.pc.getSenders().find(s=>s.track?.kind==='audio');
+      if(sender)await sender.replaceTrack(oldTrack);
+    }));
+    state.inputDeviceId=previousId;
+    state.rawStream?.getTracks().forEach(t=>t.stop());
+    state.audioContext?.close().catch(()=>{});
+    state.rawStream=old.rawStream;state.localStream=old.localStream;
+    state.audioContext=old.audioContext;state.autoTuneNode=old.autoTuneNode;state.mixer=old.mixer;
+    toast('Không thể chuyển micro. Vẫn dùng thiết bị cũ.');
+    refreshAudioDevices().catch(()=>{});
+  }
+}
+renderMixerUI();
+$('mixer-preset').addEventListener('change',e=>{
+  if(e.target.value==='custom')return;
+  state.mixerSettings=presetMixer(e.target.value,state.mixerSettings);
+  persistMixer();
+});
+$('mixer-reset').addEventListener('click',()=>{
+  state.mixerSettings=normalizeMixer({...MIXER_DEFAULTS,monitor:false});
+  persistMixer();
+  toast('Đã khôi phục cấu hình mixer an toàn.');
+});
+for(const key of mixerKeys){
+  $('mix-'+key).addEventListener('input',e=>{
+    state.mixerSettings=normalizeMixer({...state.mixerSettings,[key]:Number(e.target.value),preset:'custom'});
+    persistMixer();
+  });
+}
+$('mix-reverbRoom').addEventListener('change',e=>{
+  state.mixerSettings=normalizeMixer({...state.mixerSettings,reverbRoom:e.target.value,preset:'custom'});
+  persistMixer();
+});
+$('mix-monitor').addEventListener('change',e=>{
+  state.mixerSettings=normalizeMixer({...state.mixerSettings,monitor:e.target.checked,preset:'custom'});
+  persistMixer();
+  if(e.target.checked)toast('⚠ Chỉ bật nghe thử micro khi dùng tai nghe, tránh hú/rít âm thanh.',5800);
+});
+$('mixer-input').addEventListener('change',e=>changeMicDevice(e.target.value));
+$('mixer-speaker').addEventListener('change',async e=>{
+  const id=e.target.value;
+  if(id && typeof HTMLMediaElement.prototype.setSinkId!=='function'){
+    toast('Trình duyệt này không hỗ trợ chọn loa.');return;
+  }
+  state.speakerSinkId=id;
+  for(const audio of document.querySelectorAll('audio[data-peer]')){
+    if(typeof audio.setSinkId==='function'){
+      try{await audio.setSinkId(id)}catch(err){console.warn('setSinkId:',err);toast('Trình duyệt không cho phép chọn loa này.');}
+    }
+  }
+});
+$('mixer-refresh-devices').addEventListener('click',()=>refreshAudioDevices().catch(()=>toast('Không thể liệt kê thiết bị âm thanh.')));
+navigator.mediaDevices?.addEventListener?.('devicechange',()=>refreshAudioDevices().catch(()=>{}));
+refreshAudioDevices().catch(()=>{});
+
 function togglePtt(){state.pushToTalk=!state.pushToTalk;if(state.isMicOn)setTransmitting(!state.pushToTalk);updateMicUI()}
 function pttKey(event,enabled){
   if(!state.pushToTalk||!state.isMicOn||!state.room)return;
@@ -656,7 +826,7 @@ $('unlock-video').addEventListener('click',()=>{
   catch{toast('Không thể phát. Hãy thử nhấn Play trên video.');}
 });
 $('sound-button').addEventListener('click',()=>{const value=Number($('voice-volume').value);$('voice-volume').value=value===0?'85':'0';$('voice-volume').dispatchEvent(new Event('input'))});
-$('voice-volume').addEventListener('input',e=>{const vol=Number(e.target.value)/100;for(const audio of document.querySelectorAll('audio[data-peer]'))audio.volume=vol});
+$('voice-volume').addEventListener('input',e=>{state.mixerSettings=normalizeMixer({...state.mixerSettings,voiceVolume:Number(e.target.value)});persistMixer();});
 for(const btn of document.querySelectorAll('[data-reaction]'))btn.addEventListener('click',()=>{
   const emoji=btn.dataset.reaction;
   if(state.room)socket.emit('reaction:send',{emoji});

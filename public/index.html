@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0920"/>
   <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
-  <title>KaraokeVerse 3D v1.2.2 • Karaoke & Auto-Tune</title>
+  <title>KaraokeVerse 3D v1.2.3 • Karaoke Mixer & Auto-Tune</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -70,6 +70,67 @@
           </div>
         </div>
         <div class="bottom-controls"><div class="ctrl-section"><button id="mic-button" class="control-btn" disabled><span class="control-icon">🎙</span><span id="mic-label">Bật micro</span></button><button id="ptt-button" class="control-btn" disabled title="Giữ phím Space để nói khi chế độ này được bật"><span class="control-icon">◉</span><span id="ptt-label">Open mic</span></button><button id="sound-button" class="control-btn"><span class="control-icon">🔈</span><span>Âm lượng</span></button><input id="voice-volume" aria-label="Âm lượng người khác" type="range" min="0" max="100" value="85"/></div><div class="ctrl-section"><button id="copy-room-bottom" class="control-btn accent-control" disabled>✉ Mời bạn bè</button></div></div>
+        <details class="mixer-panel" id="mixer-panel" open>
+          <summary><span>🎚 MIXER KARAOKE PRO</span><small id="mixer-badge">SẴN SÀNG</small><span class="autotune-chevron">⌄</span></summary>
+          <div class="mixer-body">
+            <div class="mixer-toolbar">
+              <label>Chế độ âm thanh
+                <select id="mixer-preset" aria-label="Preset âm thanh">
+                  <option value="natural">🎤 Tự nhiên</option>
+                  <option value="ballad">🎼 Ballad</option>
+                  <option value="bolero">🌙 Bolero</option>
+                  <option value="pop">⚡ Pop / EDM</option>
+                  <option value="speech">💬 Trò chuyện</option>
+                  <option value="custom">⚙ Tùy chỉnh</option>
+                </select>
+              </label>
+              <button type="button" id="mixer-reset" class="mixer-reset">↺ Đặt lại</button>
+              <span id="mixer-status" class="mixer-status">Bật micro để kích hoạt bộ xử lý.</span>
+            </div>
+            <div class="mixer-columns">
+              <section class="mixer-section" aria-label="Micro và Equalizer">
+                <h3>🎙 MICRO & EQ</h3>
+                <div class="mixer-slider-list">
+                  <label class="mixer-select-label">Thiết bị micro
+                    <select id="mixer-input"><option value="">Micro mặc định hệ thống</option></select>
+                  </label>
+                  <label>Độ nhạy micro <output id="mix-inputGain-value"></output><input id="mix-inputGain" type="range" min="-12" max="12" step="1"/></label>
+                  <label>Bass <output id="mix-bass-value"></output><input id="mix-bass" type="range" min="-12" max="12" step="1"/></label>
+                  <label>Mid <output id="mix-mid-value"></output><input id="mix-mid" type="range" min="-12" max="12" step="1"/></label>
+                  <label>Treble <output id="mix-treble-value"></output><input id="mix-treble" type="range" min="-12" max="12" step="1"/></label>
+                  <label>Compression <output id="mix-compression-value"></output><input id="mix-compression" type="range" min="0" max="100" step="1"/></label>
+                  <label>Âm lượng mic gửi đi <output id="mix-micOutput-value"></output><input id="mix-micOutput" type="range" min="0" max="100" step="1"/></label>
+                </div>
+              </section>
+              <section class="mixer-section" aria-label="Echo và Reverb">
+                <h3>✨ ECHO & REVERB</h3>
+                <div class="mixer-slider-list">
+                  <label>Độ trễ Echo <output id="mix-echoTime-value"></output><input id="mix-echoTime" type="range" min="70" max="600" step="5"/></label>
+                  <label>Độ lặp Echo <output id="mix-echoFeedback-value"></output><input id="mix-echoFeedback" type="range" min="0" max="55" step="1"/></label>
+                  <label>Âm lượng Echo <output id="mix-echoMix-value"></output><input id="mix-echoMix" type="range" min="0" max="60" step="1"/></label>
+                  <label>Độ vang Reverb <output id="mix-reverbMix-value"></output><input id="mix-reverbMix" type="range" min="0" max="60" step="1"/></label>
+                  <label class="mixer-select-label">Không gian vang
+                    <select id="mix-reverbRoom"><option value="small">Phòng nhỏ</option><option value="medium">Phòng vừa</option><option value="large">Hội trường</option></select>
+                  </label>
+                </div>
+              </section>
+              <section class="mixer-section" aria-label="Nhạc và loa">
+                <h3>🔊 NHẠC & LOA</h3>
+                <div class="mixer-slider-list">
+                  <label>Nhạc YouTube (máy bạn) <output id="mix-musicVolume-value"></output><input id="mix-musicVolume" type="range" min="0" max="100" step="1"/></label>
+                  <label>Giọng bạn bè (máy bạn) <output id="mix-voiceVolume-value"></output><input id="mix-voiceVolume" type="range" min="0" max="100" step="1"/></label>
+                  <label class="mixer-select-label">Thiết bị loa / tai nghe nhận giọng nói
+                    <select id="mixer-speaker"><option value="">Loa mặc định hệ thống</option></select>
+                  </label>
+                  <button type="button" class="mixer-reset" id="mixer-refresh-devices">↻ Làm mới danh sách loa</button>
+                  <label class="mixer-check"><input type="checkbox" id="mix-monitor"/> Nghe thử mic qua tai nghe (mặc định tắt)</label>
+                </div>
+                <p class="mixer-hint">Chọn loa chỉ áp dụng cho giọng nói WebRTC; nhạc YouTube dùng loa mặc định của trình duyệt/hệ điều hành.</p>
+              </section>
+            </div>
+            <p class="mixer-footnote">🎧 Nên dùng tai nghe để tránh hú/rít. Echo, Reverb, EQ và Compression áp dụng lên <b>micro của bạn trước khi gửi cho người khác</b>; âm lượng nhạc và giọng bạn bè chỉ điều chỉnh trên thiết bị của bạn. Bật giám sát micro có thể gây vọng âm khi dùng loa ngoài.</p>
+          </div>
+        </details>
         <details class="autotune-panel" id="autotune-panel">
           <summary><span>✨ AUTO-TUNE LAB</span><small id="autotune-badge">ĐANG TẮT</small><span class="autotune-chevron">⌄</span></summary>
           <div class="autotune-controls">
@@ -100,7 +161,7 @@
         <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
       </aside>
     </main>
-    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.2 • AUTO-TUNE LAB</span></footer>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.3 • KARAOKE MIXER</span></footer>
   </div>
   <div id="welcome-screen" class="modal-layer">
     <div class="welcome-glow"></div>
