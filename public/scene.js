@@ -260,7 +260,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   const glbLoader=new GLTFLoader();
   let avatarAsset=null;
   const avatarAssetReady=glbLoader.loadAsync('/models/karaoke-avatar.glb')
-    .then(asset=>{avatarAsset=asset;for(const group of userGroups.values())installAvatarGLB(group);return true;})
+    .then(asset=>{avatarAsset=asset;for(const group of userGroups.values())installAvatarGLB(group);for(const group of npcActors.values())installNPCGLB(group);return true;})
     .catch(error=>{console.warn('GLB avatar unavailable; using procedural fallback',error);return false;});
   function installAvatarGLB(group){
     if(!avatarAsset||group.userData.model||disposed)return;
@@ -382,6 +382,38 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       active:true,status:'idle',walkAmount:0};
     npcActors.set(id,root);
   }
+  // v1.4.2: give the DJ and service NPCs the same premium GLB rig as players.
+  // Original procedural NPCs remain available as a fail-safe when GLB loading fails.
+  const NPC_FASHION={
+    dj:{skin:'warm',hair:'plum',outfit:'violet',pants:'black',shoes:'white',hairStyle:'long',outfitStyle:'jacket',accessory:'headphones',expression:'joy'},
+    linh:{skin:'golden',hair:'chocolate',outfit:'sky',pants:'navy',shoes:'white',hairStyle:'ponytail',outfitStyle:'formal',accessory:'none',expression:'smile'},
+    mai:{skin:'porcelain',hair:'copper',outfit:'rose',pants:'charcoal',shoes:'white',hairStyle:'bangs',outfitStyle:'jacket',accessory:'necklace',expression:'smile'},
+    vy:{skin:'bronze',hair:'ink',outfit:'mint',pants:'denim',shoes:'black',hairStyle:'curly',outfitStyle:'tee',accessory:'none',expression:'joy'},
+  };
+  function installNPCGLB(group){
+    if(!avatarAsset||!group?.userData||group.userData.npcModel||disposed)return;
+    const d=group.userData;
+    const model=avatarAsset.scene.clone(true);model.name=`NPC_GLB_${d.id}`;
+    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.userData.sharedAvatarGeometry=true;}});
+    group.add(model);
+    applyAvatarAppearance(model,NPC_FASHION[d.id]||{},THREE);
+    model.scale.multiplyScalar(.91);
+    d.npcModel=model;d.npcMixer=new THREE.AnimationMixer(model);
+    d.npcActions=new Map(avatarAsset.animations.map(clip=>[clip.name,d.npcMixer.clipAction(clip)]));
+    d.npcAction=null;
+    d.body.visible=false;
+    const hit=model.getObjectByName('OutfitBody');
+    if(hit){register(hit,'npc',`${d.id==='dj'?'🎧 DJ':'🍹 Nhân viên'} ${d.name}`,{npcId:d.id});d.hit=hit;}
+  }
+  function animateNPCGLB(group,name,dt){
+    const d=group.userData;if(!d.npcModel)return;
+    if(d.npcAction!==name){
+      const next=d.npcActions.get(name)||d.npcActions.get('idle');
+      const prev=d.npcActions.get(d.npcAction);
+      if(next){next.reset().fadeIn(.22).play();if(prev&&prev!==next)prev.fadeOut(.22);d.npcAction=name;}
+    }
+    d.npcMixer?.update(dt);
+  }
   // DJ workstation is separate from YouTube playback; it is a visual/party animation only.
   const djDesk=new THREE.Mesh(new THREE.BoxGeometry(1.75,.76,.66),basicMat(0x3d285b,{metalness:.65,roughness:.3}));
   djDesk.position.set(-5.18,.79,-2.35);scene.add(djDesk);
@@ -395,6 +427,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   createNPCActor('linh','Linh',{outfit:0x4a83b8,hair:0x362036});
   createNPCActor('mai','Mai',{outfit:0x9b4e83,hair:0x402b24});
   createNPCActor('vy','Vy',{outfit:0x538b81,hair:0x593a24});
+  if(avatarAsset)for(const npc of npcActors.values())installNPCGLB(npc);
   function setNPCState(state){
     if(!state)return;
     const members=[state.dj,...(state.staff||[])];
@@ -958,6 +991,17 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
         const micNode=d.model.getObjectByName('Mic');
         if(micNode)micNode.visible=sing;
         d.mixer.update(dt);
+        // Non-keyframed facial micro-animations; every avatar blinks on a different cycle.
+        const blinkPhase=(t+d.seed*1.83)%4.7;
+        const blink=blinkPhase<.13?Math.max(.13,Math.abs(blinkPhase-.065)/.065):1;
+        for(const side of ['L','R']){
+          const eye=d.model.getObjectByName('EyeWhite'+side);
+          if(eye){eye.userData.atelierBaseY??=eye.scale.y;eye.scale.y=eye.userData.atelierBaseY*blink;}
+          const iris=d.model.getObjectByName('Eye'+side);
+          if(iris){iris.userData.atelierBaseY??=iris.scale.y;iris.scale.y=iris.userData.atelierBaseY*blink;}
+        }
+        const mouth=d.model.getObjectByName('SmileMouth')||d.model.getObjectByName('JoyMouth');
+        if(mouth&&mouth.visible){mouth.userData.atelierBaseY??=mouth.scale.y;mouth.scale.y=mouth.userData.atelierBaseY*(sing&&!d.muted?1+Math.abs(Math.sin(t*8+d.seed))*.42:1);}
         if(!d.muted)d.indicator.scale.setScalar(1+Math.sin(t*5+d.seed)*.07);
         continue;
       }
@@ -1002,6 +1046,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       d.body.rotation.z=THREE.MathUtils.damp(d.body.rotation.z,dance?Math.sin(t*3.7)*.07:0,5,dt);
       if(d.rightArm)d.rightArm.rotation.x=THREE.MathUtils.damp(d.rightArm.rotation.x,dance?-1+Math.sin(t*4)*.28:moving?Math.sin(t*8)*.23:d.status==='serving'?-1.15:0,7,dt);
       d.body.position.y=(dance?Math.sin(t*5)*.035:moving?Math.abs(Math.sin(t*7))*.026:0);
+      animateNPCGLB(g,dance?'dance':moving?'walk':d.status==='serving'?'pose':'idle',dt);
     }
     renderer.render(scene,camera);cssRenderer.render(cssScene,camera);
   }

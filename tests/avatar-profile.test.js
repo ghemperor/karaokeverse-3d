@@ -10,7 +10,7 @@ test('Avatar palettes accept known colors and reject code/injection',()=>{
  const p=normalizeAvatarProfile({skin:'deep',hair:'pink',outfit:'rose',hairStyle:'long',accessory:'glasses',build:'broad',__proto__:{isAdmin:true}});
  assert.equal(p.skin,'deep');assert.equal(p.hairStyle,'long');assert.equal(p.outfit,'rose');
  assert.equal(p.isAdmin,undefined);assert.equal(normalizeAvatarProfile({outfit:'<script>'}).outfit,'violet');
- assert.ok(Object.keys(p).length<=9);
+ assert.deepEqual(Object.keys(p).sort(),Object.keys(DEFAULT_AVATAR_PROFILE).sort(), 'profile must contain only defined settings');
 });
 test('Avatar models offer at least three hair options, 3 body types and 3 accessories',()=>{
  assert.ok(AVATAR_CHOICES.hairStyle.length>=3);assert.ok(AVATAR_CHOICES.build.length>=3);assert.ok(AVATAR_CHOICES.accessory.length>=3);

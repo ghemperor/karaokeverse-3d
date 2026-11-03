@@ -1,13 +1,13 @@
 {
   "name": "karaokeverse-3d",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "type": "module",
-  "description": "KaraokeVerse private party: rounded articulated GLB avatar, responsive mobile feature dock, DJ and named service NPCs; retains Battle, party games, gifts, Mixer Pro, Auto-Tune, YouTube and voice chat.",
+  "description": "KaraokeVerse Avatar Atelier: polished original GLB characters, 12 animations, expressive customization, premium mobile avatar studio and NPC GLB integration; preserves private party games and voice chat.",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check lib/npc-service.js && node --check public/npc-ui.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-profile.js && node --check public/avatar-materials.js && node --check public/avatar-studio.js && node --test tests/*.test.js"
+    "check": "node --check server.js && node --check lib/npc-service.js && node --check public/npc-ui.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-profile.js && node --check public/avatar-materials.js && node --check public/avatar-studio.js && node --check public/avatar-materials.js && node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=20"

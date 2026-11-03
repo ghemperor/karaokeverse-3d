@@ -1,5 +1,6 @@
-"""Build KaraokeVerse's ORIGINAL low-poly GLB avatar and embedded node animation clips.
-No downloaded/third-party model or textures; geometry created with trimesh.
+"""Build KaraokeVerse ORIGINAL Avatar Atelier GLB (v1.4.2).
+Self-contained, authored from procedural meshes and native glTF animation.
+No downloaded third-party model or textures. Compatible with v1.4 rig names.
 Run: python scripts/build-avatar-glb.py
 """
 import json, struct, math, pathlib
@@ -28,17 +29,19 @@ def accessor(values,dtype,typ,target=None, minmax=False):
     J['accessors'].append(out);return len(J['accessors'])-1
 
 materials={
-    'Outfit':(.63,.34,.94), 'Skin':(1.,.78,.60),'Hair':(.16,.12,.24),'Pants':(.15,.16,.27),
-    'Shoes':(.89,.87,1.),'Accent':(.94,.87,1.),'Eyes':(.10,.08,.15), 'Mic':(.60,.59,.72),
-    'Accessory':(.91,.63,1.),
+    'Outfit':(.51,.26,.86), 'Skin':(1.,.77,.59),'Hair':(.13,.10,.18),'Pants':(.13,.15,.25),
+    'Shoes':(.94,.93,1.),'Accent':(.96,.88,1.),'Eyes':(.12,.09,.16), 'Mic':(.60,.59,.72),
+    'Accessory':(.94,.76,1.), 'EyeWhite':(.99,.97,1.),'Iris':(.35,.23,.43),
+    'Catchlight':(1.,1.,1.), 'Lip':(.59,.22,.30),'Metal':(.79,.76,.92),
+    'Seam':(.74,.64,.98),'Sole':(.92,.88,1.),'Inner':(.99,.98,1.), 'Blush':(.94,.56,.59),
 }
 for name,rgb in materials.items():
     J['materials'].append({'name':name,'pbrMetallicRoughness':{'baseColorFactor':[float(x) for x in rgb]+[1], 'metallicFactor':.05,'roughnessFactor':.8},'doubleSided':True})
 mat_idx={n:i for i,n in enumerate(materials)}
 base_geom={
     'box':trimesh.creation.box(extents=(1,1,1)),
-    'sphere':trimesh.creation.icosphere(subdivisions=3,radius=.5),
-    'cylinder':trimesh.creation.cylinder(radius=.5,height=1,sections=24),
+    'sphere':trimesh.creation.uv_sphere(radius=.5,count=[20,24]),
+    'cylinder':trimesh.creation.cylinder(radius=.5,height=1,sections=28),
 }
 geo_accessors={}
 for kind,mesh in base_geom.items():
@@ -75,17 +78,36 @@ part('OutfitCollar',torso,'cylinder','Accent',(0,.60,0),(.26,.14,.26))
 part('OutfitStripe',torso,'sphere','Accent',(0,.22,-.228),(.32,.055,.035))
 part('JacketHem',torso,'cylinder','Outfit',(0,-.04,0),(.55,.10,.36))
 head=node('Head',hips,(0,.86,0))
-part('Face',head,'sphere','Skin',(0,0,0),(.68,.70,.63))
-part('Nose',head,'sphere','Skin',(0,-.065,-.316),(.10,.075,.09))
-part('HairCap',head,'sphere','Hair',(0,.22,.018),(.72,.40,.67))
+part('Face',head,'sphere','Skin',(0,-.015,0),(.70,.76,.66))
+part('Nose',head,'sphere','Skin',(0,-.045,-.339),(.11,.085,.105))
+part('HairCap',head,'sphere','Hair',(0,.245,.065),(.75,.43,.70))
 for suffix,x in [('L',-.14),('R',.14)]:
-    part('Eye'+suffix,head,'sphere','Eyes',(x,.035,-.317),(.063,.077,.033))
-    part('Brow'+suffix,head,'sphere','Hair',(x,.16,-.304),(.15,.025,.022))
-    part('Cheek'+suffix,head,'sphere','Skin',(x*1.6,-.10,-.24),(.16,.09,.07))
-part('Mouth',head,'sphere','Accent',(0,-.18,-.317),(.14,.035,.03))
+    part('EyeWhite'+suffix,head,'sphere','EyeWhite',(x,.075,-.315),(.134,.158,.058))
+    part('Eye'+suffix,head,'sphere','Iris',(x,.078,-.365),(.086,.111,.032))
+    part('Pupil'+suffix,head,'sphere','Eyes',(x,.08,-.393),(.047,.077,.015))
+    part('EyeHighlight'+suffix,head,'sphere','Catchlight',(x-.031,.126,-.408),(.029,.036,.012))
+    part('Brow'+suffix,head,'sphere','Hair',(x,.23,-.308),(.168,.033,.039))
+    part('Blush'+suffix,head,'sphere','Blush',(x*1.67,-.115,-.267),(.15,.071,.024))
+    part('Ear'+suffix,head,'sphere','Skin',((-.36 if suffix=='L' else .36),-.015,.006),(.13,.23,.14))
+    part('EarInner'+suffix,head,'sphere','Blush',((-.397 if suffix=='L' else .397),-.01,-.092),(.04,.105,.028))
+part('SmileMouth',head,'sphere','Lip',(0,-.222,-.323),(.17,.047,.023))
+part('CoolMouth',head,'sphere','Lip',(0,-.222,-.323),(.125,.026,.021))
+part('JoyMouth',head,'sphere','Lip',(0,-.232,-.324),(.125,.123,.027))
+part('Teeth',head,'sphere','EyeWhite',(0,-.205,-.348),(.083,.044,.012))
 # Styles can be toggled by name from JS.
-part('HairBangs',head,'sphere','Hair',(0,.27,-.26),(.49,.20,.22))
-part('HairLong',head,'sphere','Hair',(0,-.21,.23),(.56,.57,.32))
+part('HairBangs',head,'sphere','Hair',(0,.295,-.265),(.55,.23,.26))
+part('HairBangsLeft',head,'sphere','Hair',(-.19,.215,-.31),(.25,.30,.16))
+part('HairBangsRight',head,'sphere','Hair',(.19,.215,-.31),(.25,.30,.16))
+part('HairLong',head,'sphere','Hair',(0,-.18,.24),(.64,.80,.39))
+part('HairLongL',head,'sphere','Hair',(-.31,-.18,-.07),(.22,.73,.27))
+part('HairLongR',head,'sphere','Hair',(.31,-.18,-.07),(.22,.73,.27))
+part('HairQuiff',head,'sphere','Hair',(-.13,.44,-.11),(.50,.28,.40))
+part('HairShortL',head,'sphere','Hair',(-.33,.12,.04),(.14,.34,.31))
+part('HairShortR',head,'sphere','Hair',(.33,.12,.04),(.14,.34,.31))
+part('HairPonytail',head,'sphere','Hair',(0,-.22,.46),(.36,.73,.28))
+part('HairPonytie',head,'sphere','Accessory',(0,.08,.40),(.19,.17,.16))
+for j,(xx,yy,zz) in enumerate([(-.30,.35,-.19),(-.13,.45,-.29),(.13,.46,-.26),(.30,.34,-.20),(-.28,.15,-.34),(.28,.15,-.34)]):
+    part('HairCurly'+str(j),head,'sphere','Hair',(xx,yy,zz),(.26,.26,.25))
 part('GlassesBridge',head,'box','Accessory',(0,.045,-.345),(.15,.03,.025))
 for side,x in [('L',-.145),('R',.145)]:
     part('Glasses'+side,head,'box','Accessory',(x,.05,-.342),(.21,.13,.022))
@@ -104,6 +126,47 @@ for name,p in [('L',leg_l),('R',leg_r)]:
     part('Pants'+name,p,'sphere','Pants',(0,-.37,0),(.28,.70,.33))
     part('Shoe'+name,p,'sphere','Shoes',(0,-.72,-.12),(.32,.18,.51))
 
+
+# Sculpted details: layered wardrobe, collar, cuffs, jacket and hoodie alternate silhouettes.
+part('Neck',hips,'cylinder','Skin',(0,.72,0),(.22,.29,.22))
+part('BaseTshirt',torso,'sphere','Inner',(0,.51,-.225),(.40,.22,.09))
+part('StyleJacketL',torso,'sphere','Outfit',(-.245,.26,-.240),(.30,.67,.095))
+part('StyleJacketR',torso,'sphere','Outfit',(.245,.26,-.240),(.30,.67,.095))
+part('StyleJacketCollarL',torso,'sphere','Accent',(-.15,.56,-.271),(.16,.23,.08))
+part('StyleJacketCollarR',torso,'sphere','Accent',(.15,.56,-.271),(.16,.23,.08))
+part('StyleJacketZip',torso,'cylinder','Metal',(0,.23,-.306),(.020,.52,.025))
+part('StyleJacketPocketL',torso,'sphere','Seam',(-.22,.08,-.292),(.17,.048,.022))
+part('StyleJacketPocketR',torso,'sphere','Seam',(.22,.08,-.292),(.17,.048,.022))
+part('StyleHoodieHood',torso,'sphere','Outfit',(0,.58,.20),(.59,.52,.38))
+part('StyleHoodiePouch',torso,'sphere','Outfit',(0,.06,-.276),(.50,.25,.10))
+for side in [-1,1]:
+  part('StyleHoodieCord'+('L' if side<0 else 'R'),torso,'cylinder','Accent',(side*.10,.39,-.305),(.020,.28,.020))
+part('StyleFormalLapL',torso,'sphere','Accent',(-.16,.43,-.267),(.17,.34,.055))
+part('StyleFormalLapR',torso,'sphere','Accent',(.16,.43,-.267),(.17,.34,.055))
+part('StyleFormalTie',torso,'cylinder','Seam',(0,.35,-.308),(.045,.43,.045))
+part('StyleFormalButton',torso,'sphere','Metal',(0,.10,-.318),(.035,.035,.021))
+# Textured-feeling fabric details are real 3D geometry, not an image overlay.
+part('Waistband',hips,'cylinder','Seam',(0,-.125,0),(.60,.08,.42))
+for suffix,arm in [('L',arm_l),('R',arm_r)]:
+  part('SleeveCuff'+suffix,arm,'cylinder','Accent',(0,-.285,0),(.21,.065,.24))
+for suffix,leg in [('L',leg_l),('R',leg_r)]:
+  part('KneeFold'+suffix,leg,'sphere','Pants',(0,-.48,-.18),(.24,.08,.09))
+  part('ShoeSole'+suffix,leg,'sphere','Sole',(0,-.80,-.13),(.34,.085,.53))
+  part('ShoeTongue'+suffix,leg,'sphere','Accent',(0,-.665,-.31),(.16,.065,.20))
+  for line in range(3):
+    part('Shoelace'+suffix+str(line),leg,'sphere','Seam',(0,-.655-line*.032,-.345),(.21,.016,.015))
+# Light-watch and bracelets enhance close-up details.
+part('WristWatch',arm_l,'cylinder','Accessory',(0,-.62,0),(.22,.085,.22))
+part('WatchFace',arm_l,'sphere','Metal',(0,-.62,-.11),(.115,.058,.035))
+# Accessories: all optional, controlled by profile values.
+part('CapBrim',head,'sphere','Outfit',(0,.34,-.39),(.61,.10,.36))
+part('CapCrown',head,'sphere','Outfit',(0,.48,.0),(.69,.32,.64))
+part('NecklaceChain',torso,'sphere','Metal',(0,.53,-.258),(.26,.035,.030))
+part('NecklaceCharm',torso,'sphere','Accessory',(0,.43,-.296),(.10,.13,.05))
+# Further micro grille details for singing close-ups.
+part('MicGrilleRing',mic,'cylinder','Metal',(0,.21,0),(.105,.03,.105))
+part('MicCore',mic,'cylinder','Eyes',(0,-.03,0),(.062,.04,.062))
+
 ids={obj['name']:i for i,obj in enumerate(J['nodes'])}
 def quat_euler(rx=0,ry=0,rz=0):
     cx,sx=math.cos(rx/2),math.sin(rx/2)
@@ -118,19 +181,21 @@ anim={
  'idle':{'Torso':[(0,0,-.035),(0,0,.035),(0,0,-.035)],'Head':[(0,.055,0),(0,-.055,0),(0,.055,0)]},
  'walk':{'LegL':[(.6,0,0),(-.6,0,0),(.6,0,0)],'LegR':[(-.6,0,0),(.6,0,0),(-.6,0,0)],'ArmL':[(-.5,0,0),(.5,0,0),(-.5,0,0)],'ArmR':[(.5,0,0),(-.5,0,0),(.5,0,0)]},
  'sit':{'LegL':[(1.43,0,0)]*3,'LegR':[(1.43,0,0)]*3,'ArmL':[(-.18,0,.13)]*3,'ArmR':[(-.18,0,-.13)]*3},
- 'sing':{'ArmR':[(.55,0,-.19),(.59,0,-.16),(.55,0,-.19)],'ArmL':[(.3,0,.3),(.37,0,.4),(.3,0,.3)],'Head':[(0,-.07,.02),(0,.07,.02),(0,-.07,.02)]},
+ 'sing':{'ArmR':[(.86,0,-.17),(.91,0,-.20),(.86,0,-.17)],'ArmL':[(.28,0,.28),(.38,0,.41),(.28,0,.28)],'Head':[(0,-.085,.02),(0,.09,.02),(0,-.085,.02)],'Torso':[(0,0,-.03),(0,0,.03),(0,0,-.03)]},
  'dance':{'ArmL':[(-1.7,0,.25),(-.5,0,-.3),(-1.7,0,.25)],'ArmR':[(-.6,0,-.25),(-1.7,0,.3),(-.6,0,-.25)],'LegL':[(.35,0,0),(-.32,0,0),(.35,0,0)],'LegR':[(-.35,0,0),(.32,0,0),(-.35,0,0)],'Torso':[(0,0,.17),(0,0,-.17),(0,0,.17)]},
  'wave':{'ArmR':[(-2.1,0,-.12),(-2.45,0,-.38),(-2.1,0,-.12)],'Head':[(0,.16,0),(0,-.13,0),(0,.16,0)]},
  'clap':{'ArmL':[(-1.05,0,-.75),(-.93,0,-.95),(-1.05,0,-.75)],'ArmR':[(-1.05,0,.75),(-.93,0,.95),(-1.05,0,.75)]},
  'cheer':{'ArmL':[(-2.65,0,.12),(-2.4,0,.3),(-2.65,0,.12)],'ArmR':[(-2.65,0,-.12),(-2.4,0,-.3),(-2.65,0,-.12)]},
  'bow':{'Torso':[(.43,0,0),(.75,0,0),(.43,0,0)],'Head':[(.23,0,0),(.31,0,0),(.23,0,0)]},
  'heart':{'ArmL':[(-.95,0,-.8)]*3,'ArmR':[(-.95,0,.8)]*3},
+ 'pose':{'ArmL':[(.05,0,.26)]*3,'ArmR':[(.05,0,-.26)]*3,'Torso':[(0,.06,-.04)]*3},
+ 'salute':{'ArmR':[(-1.6,0,-.3),(-1.7,0,-.4),(-1.6,0,-.3)],'ForearmR':[(.2,0,-.3)]*3},
 }
 # Independent elbow articulation: bends naturally with the microphone near the lips.
 for action,motion in anim.items():
     motion.setdefault('ForearmL',[(0,0,0)]*3)
     motion.setdefault('ForearmR',[(0,0,0)]*3)
-anim['sing']['ForearmR']=[(2.18,0,0),(2.24,0,0),(2.18,0,0)]
+anim['sing']['ForearmR']=[(1.48,0,-.54),(1.52,0,-.57),(1.48,0,-.54)]
 for name,motion in anim.items():
     animation={'name':name,'samplers':[],'channels':[]}
     time_access=accessor(T,np.float32,'SCALAR',minmax=True)
@@ -155,4 +220,4 @@ chunk2=struct.pack('<I4s',len(BUF),b'BIN\0')+BUF
 with open(OUT,'wb') as f:
     f.write(struct.pack('<4sII',b'glTF',2,12+len(chunk1)+len(chunk2)))
     f.write(chunk1);f.write(chunk2)
-print('Created',OUT,'bytes:',OUT.stat().st_size,'clips:',[a['name'] for a in J['animations']],'nodes:',len(J['nodes']))
+print('Avatar Atelier created',OUT,'bytes:',OUT.stat().st_size,'clips:',[a['name'] for a in J['animations']],'nodes:',len(J['nodes']))

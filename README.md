@@ -1,64 +1,68 @@
-# KaraokeVerse 3D v1.4.1 — PRIVATE PARTY LOUNGE
+# KaraokeVerse 3D v1.4.2 — AVATAR ATELIER
 
-Phiên bản phát triển từ **v1.4 Avatar Studio** dành cho nhóm bạn riêng tư. Giữ **Three.js, GLB, Solo/Team Battle, Party Games, quà tặng, YouTube IFrame Player, WebRTC/STUN/TURN, Mixer Pro, Echo, Reverb, EQ và Auto-Tune**.
+Đây là bản **nâng cấp toàn diện nhân vật / Avatar Studio** từ v1.4.1 Private Party Lounge, phục vụ nhóm bạn riêng tư. Không thay đổi các cơ chế YouTube, phòng, WebRTC/TURN, Mixer Pro, Auto-Tune, Battle, Party Games, quà tặng, DJ và nhân viên NPC.
 
-## Mới trong v1.4.1
+## Bản phát hành này có gì mới?
 
-### Avatar 3D mềm mại hơn
+### 1. Model avatar GLB được dựng lại
 
-- `public/models/karaoke-avatar.glb` được **tự xây dựng lại từ script đi kèm**, nhiều khối hình bo tròn hơn, khuôn mặt/tóc/áo/quần/giày được làm rõ hơn.
-- Thêm **khớp khuỷu tay** `ForearmL` và `ForearmR`; clip `sing` có tư thế đưa micro lên miệng, `sit` và `stand` có keyframe vị trí hông riêng để tránh giữ dáng ngồi.
-- Vẫn 10 clip gốc (`idle`, `walk`, `sit`, `sing`, `dance`, `wave`, `clap`, `cheer`, `bow`, `heart`) và hệ thống palette v1.4. Đây là **GLB stylized tự làm**, chưa phải người thật 3D hoặc mocap.
+- Asset gốc `public/models/karaoke-avatar.glb` được tạo bằng **script đi kèm**, không tải model thương mại hay asset có vấn đề bản quyền.
+- **111 nodes và 12 animation clips** trong GLB; khoảng 70 KB; mô hình stylized mới với mặt, iris, pupils, catchlights, má, lông mày, biểu cảm miệng; chi tiết tóc, áo khoác, áo hoodie, áo thun, áo thanh lịch, viền áo, cúc, đồng hồ, giày/dây giày và micro.
+- Khớp vai/khuỷu tay cho animation hát, đi, ngồi, nhảy, vẫy tay, vỗ tay, cổ vũ, cúi chào, thả tim, tạo dáng.
+- Chớp mắt và hoạt họa miệng nhẹ trong phòng karaoke, giữ nguyên tỷ lệ mesh.
+- DJ Luna và Linh/Mai/Vy sử dụng cùng rig GLB được cá nhân hóa; giữ model procedural làm phương án dự phòng khi tải GLB thất bại.
+- Model **stylized** chứ không phải photorealistic, chưa sử dụng skinning mocap hoặc đồ họa AAA.
 
-### Mobile: truy cập đầy đủ chức năng
+### 2. Avatar Studio mới
 
-- Dưới màn hình điện thoại có thanh **Phòng 3D / Bài hát / Micro / DJ & NPC / Chat / Tất cả**.
-- Menu **Tất cả** đưa tới 12 khu vực như Avatar Studio, Karaoke Battle, Party Games, quà tặng, Echo/Reverb, Auto-Tune, cài đặt đèn và chat.
-- Mọi panel đều có thể cuộn và mở riêng; trên tablet dưới 960 px **không còn ẩn hoàn toàn chat/thành viên**.
-- Thanh play/pause, next và **tua YouTube** hiển thị riêng hàng để không chồng chữ trên màn hình hẹp.
-- Các panel âm thanh / game được thu gọn khi vào bằng điện thoại, bạn bấm từ menu để mở đúng panel.
+- Trình xem 3D có ánh sáng studio, sàn trình diễn, có thể xoay 360° và xem **chính diện / nghiêng / phía sau / xoay tự do**.
+- Chọn thử **11 hành động** trực tiếp trong preview (gồm cầm mic hát và ngồi).
+- **4 preset**: Pop Star, Chill Night, VIP Lounge, Retro Beat; chức năng randomize, undo, reset.
+- Tùy chỉnh **7 màu da, 9 màu tóc, 9 màu áo, 6 màu quần, 5 màu giày**, 5 kiểu tóc, 5 loại phụ kiện, 4 kiểu trang phục, 3 dáng người, 3 biểu cảm.
+- UI chia tab Khuôn mặt & tóc / Trang phục / Phụ kiện. Trên mobile hiển thị dạng màn hình toàn phần, cuộn được toàn bộ thiết lập và chân trang giữ nút Lưu.
+- Lựa chọn lưu `localStorage` và gửi sang Socket.IO khi ở trong phòng như trước.
 
-### DJ & các nhân viên NPC
+### 3. Giữ tương thích
 
-NPC có ba nhân viên **Linh, Mai, Vy** và **DJ Luna**, đều là nhân vật hư cấu trưởng thành, tạo bằng Three.js ngay trong phòng. DJ có bàn mix và hiệu ứng chuyển động; các nhân viên có tóc, đồng phục, bảng tên và cử động.
+Không thay đổi tên các clip animation cũ hoặc đường dẫn GLB; profile cũ được nâng lên schema v1.4.2 với các mục mới lấy mặc định an toàn. Bộ dựng không đòi database, API key mới hay cấu hình Render mới.
 
-- Mở **🎧 DJ & NHÂN VIÊN PHỤC VỤ • NPC**, hoặc chạm vào nhân vật trong phòng.
-- Chọn nhân viên → **Gọi đến bàn** để NPC di chuyển đến vị trí gần bàn trung tâm.
-- Chọn **Bia (mô phỏng), Nước ngọt, Nước lọc** → **Mang đồ uống** → **Mời cụng ly** hoặc **Cảm ơn & tiễn**.
-- Chọn **DJ Luna** → **Chào DJ**; chủ phòng có thể **Bật/tắt animation DJ**.
-- Chủ phòng có thể **đặt lại tên** tất cả bốn nhân vật bằng cách chọn nhân vật rồi nhập tên.
-- Tất cả thay đổi được máy chủ kiểm tra và đồng bộ qua **Socket.IO**; một nhân viên không phục vụ cùng lúc hai người khác nhau. Người chơi rời phòng thì NPC tự về quầy.
-- **Giới hạn:** đây là hành động mô phỏng cho game, không có mua đồ uống thật; NPC sử dụng hội thoại viết sẵn, **không phải AI chatbot**. DJ chỉ là hiệu ứng 3D, **không thay thế trình phát YouTube hay chỉnh mixer của người chơi**.
+## Chạy trên Windows
 
-## Khởi chạy trên Windows
+1. Cài Node.js 22 và có kết nối Internet (để tải dependencies + Three.js từ CDN).
+2. Giải nén toàn bộ thư mục, chạy `CHAY-TREN-WINDOWS.bat`.
+3. Truy cập `http://localhost:3002` (cổng mặc định). Nếu trùng port, mở CMD tại thư mục và chạy `CHAY-TREN-WINDOWS.bat 3003`.
+4. Vào Avatar Studio từ màn hình chào hoặc nút `Avatar` trong phòng.
 
-1. Giải nén. Cài **Node.js LTS 22**.
-2. Mở `CHAY-TREN-WINDOWS.bat` hoặc chạy `npm install && npm start`.
-3. Bản `.bat` đặt cổng **3002**. Mở `http://localhost:3002`.
-4. Nếu 3002 bị chiếm: `CHAY-TREN-WINDOWS.bat 3003`.
+macOS/Linux: chạy `npm install && PORT=3002 npm start`.
 
-Với macOS/Linux: `npm install`, `PORT=3002 npm start`.
+## Kiểm thử mã nguồn
 
-## Kiểm thử
+`npm run check` hoặc `node --test tests/*.test.js`.
 
-Tại thư mục dự án: `npm run check`.
+Tại thời điểm đóng gói: **74/74 tests Node đạt**; GLB đọc được dưới dạng glTF scene độc lập; kiểm tra CSS layout ở 360, 390, 768 và 1280 px không tràn ngang, nút lưu trong vùng nhìn thấy.
 
-Kiểm tra thực tế (nên làm lần lượt):
+**Giới hạn chưa kiểm chứng:** Model GLB không được render với Three.js trong phiên thử Chromium không có thư viện CDN, do đó ngoại hình/animation thực tế cần chạy thử ở Chrome/Edge có Internet. Chưa kiểm chứng đa thiết bị WebRTC và NPC animation thực tế trên Render sau bản nâng cấp. Kiểm thử code không thay thế kiểm thử game trên thiết bị thật.
 
-1. Vào phòng, dùng 2 trình duyệt khác nhau, gọi Linh đến bàn ở A. Xem NPC di chuyển và trạng thái phục vụ thay đổi ở B.
-2. Thử gọi cùng Linh từ B trong lúc đang phục vụ A (B cần nhận thông báo không thể gọi); thử Mai/Vy vẫn độc lập.
-3. Chủ phòng đổi tên Mai thành một tên khác; B phải thấy tên mới. Rời phòng và quay lại từ bản khởi động lại sẽ khôi phục tên mặc định do dữ liệu chỉ nằm trong RAM.
-4. Chạm DJ, thử chào, cho chủ phòng bật/tắt DJ.
-5. Thử 390 px và tablet khoảng 768 px: menu Tất cả phải mở được từng panel; chat, Playlist, Auto-Tune, Mixer, Battle, Party, quà tặng và Avatar Studio phải truy cập được.
-6. Vào Avatar Studio, thử GLB, quay nhân vật, nhảy; trong phòng kiểm tra cầm micro và ngồi/đứng, chuyển camera.
-7. Thử YouTube, micro trên hai mạng khác nhau, Echo, Auto-Tune, bình chọn và gifts để phát hiện lỗi hồi quy.
+## Kiểm tra sau khi chạy
 
-**Đã kiểm tra:** cú pháp Node, 67 bài kiểm thử tự động cho logic và tích hợp tĩnh; ảnh kiểm tra bố cục mobile trong Chromium với DOM tĩnh. **Chưa kiểm thử thực tế:** WebGL/render NPC, âm thanh/multiplayer hai thiết bị trên Render; cần xác nhận khi bạn deploy.
+1. Mở Avatar Studio: thử chọn kiểu tóc ngắn, dài, buộc, xoăn và mũ; đảm bảo không có nhiều tóc trùng nhau.
+2. Chọn 4 preset; dùng Undo; thử chọn khuôn mặt, biểu cảm, trang phục, phụ kiện.
+3. Chọn **Cầm micro & hát** trong preview; xem tư thế khuỷu tay, vị trí micro.
+4. Vào phòng 2 trình duyệt; thay đổi nhân vật A và xác nhận B thấy đúng màu tóc/quần áo, đồng thời thử vỗ tay và ngồi/đứng.
+5. Gọi Linh/Mai/Vy đến bàn; thử DJ và cử động NPC; tương tác vẫn hoạt động.
+6. Dùng điện thoại 360–390 px, kiểm tra tabs, xem trước, điều khiển camera và nút **Lưu nhân vật**.
+7. Thử YouTube, microphone, mixer, Auto-Tune, Echo, party/vote để phát hiện hồi quy.
 
-## Deploy Render / GitHub
+## File chính
 
-Xem `HUONG-DAN-DEPLOY.md`. Gói update bao gồm **`lib/npc-service.js` và `public/npc-ui.js`** — thiếu hai file này sẽ gây lỗi khởi động hoặc mất chức năng. Giữ bí mật TURN credentials trong Render Environment, không commit vào GitHub.
+- `scripts/build-avatar-glb.py`: script tái tạo asset gốc (cần `pip install trimesh numpy` nếu muốn tự build).
+- `public/models/karaoke-avatar.glb`: asset 3D tự chứa không tải texture ngoài.
+- `public/avatar-profile.js`: schema ngoại hình với giá trị cho phép.
+- `public/avatar-materials.js`: áp dụng màu và bật/tắt các phần tóc / quần áo / biểu cảm.
+- `public/avatar-studio.js`: preview 3D, preset, undo, responsive interactions.
+- `public/scene.js`: dùng avatar GLB cho người chơi và NPC.
+- `public/index.html`, `public/style.css`: giao diện Avatar Atelier.
 
-## Giới hạn vận hành
+## An toàn & vận hành
 
-Phòng và trạng thái NPC lưu RAM. Khi Render restart, tên NPC và vị trí phục vụ của phòng sẽ trở về mặc định. Trình duyệt tải thư viện Three.js qua CDN; mạng cần truy cập CDN. WebRTC giữa các mạng có thể cần TURN. Không tự bật micro, không ghi âm. Các nhân viên là nhân vật giải trí, không có thanh toán hay đồ uống thực.
+Không đưa TURN credentials vào repo. Các biến TURN đang lưu trên Render giữ nguyên khi deploy. Do dịch vụ hiện tại trả TURN credentials qua `/config`, nên đổi sang TURN credential ngắn hạn trước khi công khai website. Nếu chỉ dùng với vài bạn bè, vẫn cần giới hạn truy cập hợp lý.
