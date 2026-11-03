@@ -3,6 +3,8 @@ import { MIXER_DEFAULTS, MIXER_RANGES, normalizeMixer, presetMixer, createKaraok
 import { createPartyUI } from './party-ui.js';
 import { createGiftUI } from './gift-ui.js';
 import { createBattleUI } from './battle-ui.js';
+import { createAvatarStudio } from './avatar-studio.js';
+import { AVATAR_PALETTES, normalizeAvatarProfile } from './avatar-profile.js';
 
 const $ = (id) => document.getElementById(id);
 const AVATARS = ['😎','🤩','🥳','🦊','🐱','🐼','👽','🐻'];
@@ -10,6 +12,10 @@ const socket = window.io({ reconnection: true, reconnectionAttempts: 10 });
 function loadMixerSettings() {
   try { return normalizeMixer(JSON.parse(localStorage.getItem('karaokeverse-mixer') || '{}')); }
   catch { return { ...MIXER_DEFAULTS }; }
+}
+function loadAvatarProfile(){
+  try{return normalizeAvatarProfile(JSON.parse(localStorage.getItem('karaokeverse-avatar-profile')||'{}'));}
+  catch{return normalizeAvatarProfile({});}
 }
 function loadAutotuneSettings() {
   try { return normalizeAutotune(JSON.parse(localStorage.getItem('karaokeverse-autotune') || '{}')); }
@@ -21,6 +27,7 @@ const state = {
   room: null,
   name: localStorage.getItem('karaokeverse-name') || '',
   avatar: Number(localStorage.getItem('karaokeverse-avatar') || '0'),
+  avatarProfile: loadAvatarProfile(),
   isMicOn: false,
   pushToTalk: false,
   transmitting: false,
@@ -81,6 +88,22 @@ function emitAck(event,payload){return new Promise((resolve)=>{
   if(!socket.connected){resolve({ok:false,error:'Mất kết nối với máy chủ.'});return;}
   socket.timeout(8000).emit(event,payload,(err,result)=>resolve(err?{ok:false,error:'Máy chủ không phản hồi.'}:result));
 });}
+let avatarUpdateTimeout=null;
+const avatarStudio=createAvatarStudio({
+  getProfile:()=>state.avatarProfile,
+  onChange:(profile)=>{
+    state.avatarProfile=profile;
+    state.scene?.applyAvatarProfile(state.myId,profile);
+    clearTimeout(avatarUpdateTimeout);
+    if(state.room)avatarUpdateTimeout=setTimeout(async()=>{
+      const result=await emitAck('avatar:update',state.avatarProfile);
+      if(!result?.ok)toast(result?.error||'Không đồng bộ được avatar.');
+    },280);
+  },
+  toast,
+});
+$('avatar-edit-welcome').addEventListener('click',()=>avatarStudio.open());
+$('avatar-edit-room').addEventListener('click',()=>avatarStudio.open());
 const partyUI = createPartyUI({
   getRoom:()=>state.room,
   getMyId:()=>state.myId,
@@ -112,7 +135,7 @@ function validateName(){
   if(!name){toast('Hãy nhập biệt danh để mọi người nhận ra bạn nhé.');$('name-input').focus();return null;}
   state.name=name;localStorage.setItem('karaokeverse-name',name);
   localStorage.setItem('karaokeverse-avatar',String(state.avatar));
-  return {name,avatar:state.avatar};
+  return {name,avatar:state.avatar,avatarProfile:state.avatarProfile};
 }
 async function createRoom(){
   const details=validateName();if(!details)return;
@@ -160,6 +183,7 @@ function resetAndLeave(showToast=true){
   $('mixer-status').textContent='Bật micro để kích hoạt bộ xử lý.';
   state.isMicOn=false;state.transmitting=false;
   $('autotune-pitch').textContent = 'Chưa nhận diện cao độ';
+  clearTimeout(avatarUpdateTimeout);
   state.myId=null;state.room=null;state.lastSingerId=null;state.currentVideoId=null;state.pendingSignals=[];
   partyUI.reset();giftUI.reset();battleUI.reset();
   state.scene?.setLocalUser(null);state.scene?.setMembers([]);state.scene?.setPerformance(null);state.scene?.setBattleState(null);state.scene?.setView('front');
@@ -186,7 +210,9 @@ function renderMembers(){
   if(!users.length){list.appendChild(element('div','member-empty','Tạo hoặc vào phòng để gặp mọi người.'));}
   for(const user of users){
     const row=element('div','member');
-    row.appendChild(element('div','member-avatar',AVATARS[user.avatar%AVATARS.length]));
+    const icon=element('div','member-avatar',AVATARS[user.avatar%AVATARS.length]);
+    icon.style.boxShadow=`inset 0 -3px 0 #${AVATAR_PALETTES.outfit[normalizeAvatarProfile(user.avatarProfile).outfit].toString(16).padStart(6,'0')}`;
+    row.appendChild(icon);
     const copy=element('div','member-copy');
     copy.appendChild(element('b','',user.name+(user.id===state.myId?' (bạn)':'')));
     copy.appendChild(element('small','',user.id===state.room.hostId?'♛ Chủ phòng':'♪ Thành viên'));
@@ -753,6 +779,12 @@ socket.on('disconnect',()=>{state.connected=false;if(state.room)toast('Mất k�
 socket.on('room:state',updated=>applyRoom(updated));
 socket.on('user:joined',user=>{if(state.room){toast(`👋 ${user.name} vừa tham gia!`);if(state.localStream)getPeer(user.id);}});
 socket.on('user:left',({id})=>{if(state.room){disconnectPeer(id);toast('Một thành viên vừa rời phòng.');}});
+socket.on('user:avatar',({id,profile}={})=>{
+  if(!state.room||!id||!profile)return;
+  const user=state.room.users.find(u=>u.id===id);
+  if(user){user.avatarProfile=normalizeAvatarProfile(profile);renderMembers();}
+  state.scene?.applyAvatarProfile(id,profile);
+});
 socket.on('user:updated',user=>{
   if(!state.room)return;
   const existing=state.room.users.find(u=>u.id===user.id);
@@ -830,7 +862,7 @@ for(const btn of document.querySelectorAll('[data-emote]'))btn.addEventListener(
   const pose=btn.dataset.emote;
   state.scene?.setEmote(pose);
   socket.emit('user:emote',{pose});
-  toast(({wave:'👋 Bạn đang vẫy tay!',clap:'👏 Bạn đang vỗ tay!',dance:'💃 Bạn đang nhảy!',stand:'🧍 Đã trở về trạng thái đứng.'})[pose]);
+  toast(({wave:'👋 Bạn đang vẫy tay!',clap:'👏 Bạn đang vỗ tay!',dance:'💃 Bạn đang nhảy!',stand:'🧍 Đã trở về trạng thái đứng.',cheer:'🙌 Cổ vũ hết mình!',bow:'🙇 Đã cúi chào!',heart:'💖 Thả tim cho mọi người!'})[pose]||'Đã gửi emote!');
 });
 $('create-room').addEventListener('click',createRoom);
 $('join-room').addEventListener('click',joinRoom);
@@ -936,7 +968,7 @@ setInterval(()=>{
         toast(messages[type]||'Đã tương tác với đồ vật.');
       },
     });
-    if(state.myId)state.scene.setLocalUser(state.myId);
+    if(state.myId){state.scene.setLocalUser(state.myId);state.scene.applyAvatarProfile(state.myId,state.avatarProfile);}
     if(state.room){state.scene.setMembers(state.room.users);state.scene.setWorldState(state.room.world);state.scene.setPerformance(state.room.performance?.singerId);state.scene.setBattleState(state.room.battle);}
     if(state.room)ensureYoutube();
   }catch(err){

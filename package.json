@@ -1,13 +1,13 @@
 {
   "name": "karaokeverse-3d",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
-  "description": "KaraokeVerse Battle Arena: server-authoritative Solo and Team Battle, live votes, Three.js stage, awards, plus YouTube, WebRTC, TURN, Auto-Tune, Mixer Pro, Party Games and Virtual Gifts",
+  "description": "KaraokeVerse Avatar Studio: original bundled animated GLB, palettes, emotes, cinematic camera and synchronized appearance; Battle Arena, gifts, party, mixer, Auto-Tune, voice and YouTube retained.",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-interactions.js && node --check public/audio-mixer.js && node --check public/autotune-math.js && node --check public/autotune-processor.js && node --check public/party-data.js && node --check public/party-wheel.js && node --check public/party-ui.js && node --check lib/party-games.js && node --check lib/gifts.js && node --check public/gift-data.js && node --check public/gift-ui.js && node --check public/battle-ui.js && node --check lib/battle.js && node --test tests/*.test.js"
+    "check": "node --check server.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-profile.js && node --check public/avatar-materials.js && node --check public/avatar-studio.js && node --check public/avatar-interactions.js && node --check public/battle-ui.js && node --check lib/battle.js && node --check lib/world.js && node --check lib/position.js && node --check public/audio-mixer.js && node --check public/autotune-math.js && node --check public/autotune-processor.js && node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=20"

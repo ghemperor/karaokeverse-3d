@@ -1,61 +1,46 @@
-# Deploy KaraokeVerse v1.3 lên Render/GitHub
+# CẬP NHẬT KARAOKEVERSE v1.4 TỪ v1.3 TRÊN GITHUB / RENDER
 
-## Nếu đã có KaraokeVerse v1.2.5 chạy trên Render
+## 1. Sao lưu
 
-1. Tải file `KaraokeVerse-v1.3-GitHub-Update.zip`.
-2. Giải nén, **upload nội dung bên trong** lên repository GitHub hiện tại, **không** tạo thư mục lồng `KaraokeVerse-v1.3-GitHub-Update` trong repo.
-3. Giữ nguyên đường dẫn tương ứng:
+Tải ZIP mã nguồn từ repository GitHub hiện tại trước khi thay đổi. Có thể lưu lại commit SHA của bản v1.3 để khôi phục nếu cần.
 
-   ```text
-   server.js
-   package.json
-   lib/battle.js
-   public/app.js
-   public/battle-ui.js
-   public/index.html
-   public/style.css
-   public/scene.js
-   tests/battle.test.js
-   ```
+## 2. Upload file đúng vị trí
 
-4. Chọn **Commit changes** trên nhánh mà Render đang kết nối (thường là `main`).
-5. Vào Render Dashboard → Web Service → Events. Nếu Auto Deploy bật, Render tự deploy. Nếu tắt: Manual Deploy → Deploy latest commit.
-6. Khi Render hiển thị **Live**, truy cập `https://TEN-WEBSITE.onrender.com/health` để xem `{ "ok": true }`.
-7. Trên game, tải lại bằng **Ctrl + Shift + R**; trên điện thoại đóng tab và mở lại đường link.
-8. Mời tối thiểu 3 thiết bị vào cùng phòng, bắt đầu Solo 1v1 và nhờ người thứ ba bầu chọn. Kiểm tra kết quả hiện đồng thời trên tất cả thiết bị.
+Giải nén **KaraokeVerse-v1.4-GitHub-Update.zip** và upload các nội dung bên trong lên **root** repository `karaokeverse-3d`, trên nhánh `main`. Ghi đè file trùng và commit.
 
-**Không cần thay đổi** `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD` nếu micro của v1.2.5 đã hoạt động. Không đưa các biến này hoặc `.env` chứa secret lên GitHub.
+Các đường dẫn quan trọng:
 
-## Nếu GitHub hiện chưa có file `lib/battle.js`
+- `server.js` — tiếp nhận profile và sự kiện `avatar:update`.
+- `lib/world.js`, `lib/position.js` — thêm ba emote hợp lệ, duy trì pose khi truyền tọa độ.
+- `public/index.html`, `public/style.css`, `public/app.js`, `public/scene.js` — giao diện, luồng realtime và cinematic.
+- `public/avatar-studio.js`, `public/avatar-profile.js`, `public/avatar-materials.js` — các module mới.
+- **`public/models/karaoke-avatar.glb`** — model GLB có animation. Đây là file nhị phân bắt buộc; đừng đổi tên hoặc chỉ dán nội dung text lên GitHub.
+- `package.json`, `tests/avatar-profile.test.js`, `tests/avatar-glb.test.js`, `scripts/build-avatar-glb.py`.
 
-**Phải upload cả file mới**, không chỉ thay `server.js`, để tránh lỗi `ERR_MODULE_NOT_FOUND` như lần trước.
+**Không upload thư mục ZIP lồng một cấp**. Trên GitHub phải thấy `server.js` ở root và `public/models/karaoke-avatar.glb` tồn tại đúng path.
 
-## Nếu chạy local trên Windows
+## 3. Render
 
-- Mặc định cổng `3002`, mở file `CHAY-TREN-WINDOWS.bat`.
-- Cổng khác: CMD trong thư mục dự án → `CHAY-TREN-WINDOWS.bat 3003`.
-- Để bật microphone từ thiết bị khác qua Internet, dùng HTTPS/Render và TURN hoạt động.
+Nếu Auto Deploy bật, Render tự deploy khi có commit mới trên `main`. Nếu không: chọn Manual Deploy → Deploy latest commit. Bản này không thêm biến môi trường.
 
-## Những việc cần kiểm thử trên Render
+**Giữ nguyên** cấu hình TURN đã lưu ở Environment. Không bao giờ đẩy credentials Metered lên GitHub. Với sản phẩm công khai, nên chuyển qua credentials ngắn hạn (hiện `/config` có thể làm lộ TURN username/password cố định).
 
-- Chủ phòng cấu hình được đội và số vòng; thành viên thường không có quyền bắt đầu, chuyển giai đoạn, hủy.
-- Hai ca sĩ luân phiên theo thứ tự A → B; bảng biểu diễn và spotlight cùng đổi.
-- Khi mở bình chọn: thành viên đủ quyền bầu đúng một phiếu, phiếu và đồng hồ 45 giây được đồng bộ.
-- Khi đóng: điểm ở tất cả thiết bị giống nhau; khi hết vòng có cúp và hiệu ứng 3D.
-- Các tính năng cũ YouTube, WebRTC, Auto-Tune, Mixer, Party Games, quà tặng, avatar vẫn hoạt động.
-- Nếu người biểu diễn rời phòng, hệ thống đổi sang đồng đội còn lại; nếu đội hết người, trận hủy và khôi phục lượt hát thường.
-- Render miễn phí có thể ngủ/chạy lại, gây mất trạng thái phòng; cần backend bền vững nếu khai thác thực tế.
+## 4. Kiểm tra ngay sau khi deploy
 
-## Sự cố thường gặp
+1. Đảm bảo trạng thái Render là `Live` (bản deploy mới).
+2. Mở `/health`, kiểm tra `ok:true`.
+3. Mở `/models/karaoke-avatar.glb` — trình duyệt phải tải file, không trả HTML. Phản hồi nên có Content-Type GLB (thường `model/gltf-binary` hoặc octet-stream). Nếu nhận HTML, file chưa được upload đúng đường dẫn.
+4. Vào website, tải mới không cache (Ctrl+Shift+R).
+5. Mở Avatar Studio ở màn chào và xem preview GLB xoay được.
+6. Tạo phòng với thiết bị A và B trên 2 mạng, đổi màu áo trên A và xác nhận B thấy ngay.
+7. Kiểm tra lại voice chat, YouTube, Echo/Auto-Tune, Party Games và Battle Arena.
 
-- **Cannot find module `./lib/battle.js`** → file mới chưa upload đúng thư mục `lib/`.
-- **Không thấy giao diện Battle** → Render chưa deploy commit mới hoặc trình duyệt vẫn cache JS/CSS.
-- **Chủ phòng không bấm được Battle** → chưa vào phòng hoặc danh sách đội chưa chọn đủ hai bên.
-- **Không thể bình chọn** → chưa đến giai đoạn bầu, đã bầu trước đó hoặc bạn là một trong hai ca sĩ vừa biểu diễn vòng này.
-- **Có 2 người và không có điểm** → cả hai là ca sĩ, cần ít nhất một khán giả để chấm.
-- **Không có âm thanh** → kiểm tra quyền microphone / Open Mic / TURN. Battle chỉ thay đổi lượt hát, không điều khiển micro vật lý.
-- **Bảng điểm mất sau deploy** → trạng thái đang lưu RAM, restart sẽ làm mất phòng và trận đấu.
+**Nếu preview đen:** kiểm tra Network/Console trong DevTools: `/models/karaoke-avatar.glb`, CDN Three.js, WebGL. Model cũ vẫn được dùng nếu nạp GLB thất bại.
 
-## Bảo mật
+## 5. Khôi phục khi gặp lỗi
 
-Một credential TURN cố định sẽ bị lộ nếu phát thẳng qua `/config`; nên cấu hình TURN credentials ngắn hạn, có giới hạn và xoay vòng. Không chia sẻ public JSON chứa credentials. Luật tính điểm ở server giúp tránh gian lận phiếu ở mức MVP, nhưng chưa có xác thực tài khoản chống việc một người mở nhiều phiên truy cập và bỏ phiếu nhiều danh tính.
+Vào GitHub, revert commit nâng cấp hoặc deploy lại commit v1.3 trên Render. Các biến TURN của Render vẫn không thay đổi. Nếu lỗi chỉ trên máy một người, thử hard refresh và xóa cache website trước khi rollback toàn bộ.
+
+## Giới hạn
+
+Phiên bản này đã kiểm tra tự động Node/GLB nhưng chưa được thử trên Render hay 2 thiết bị thực tế. Model GLB có animation theo node (không phải skeletal mocap). Chưa có đăng nhập hoặc lưu avatar trên server vĩnh viễn.

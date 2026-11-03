@@ -13,3 +13,7 @@ test('rejects invalid movement and clamps to room bounds',()=>{
   assert.equal(cleanPosition(null),null);
   assert.deepEqual(cleanPosition({x:1000,z:-1000,yaw:0,pose:'unknown'}),{x:6.73,z:-4.35,yaw:0,pose:'stand'});
 });
+
+test('new v1.4 emotes survive sanitized multiplayer position',()=>{
+ for(const pose of ['cheer','bow','heart'])assert.equal(cleanPosition({x:0,z:0,yaw:0,pose}).pose,pose);
+});

@@ -200,3 +200,44 @@
 .battle-champion-overlay span:not(.battle-champion-cup){font-size:12px;color:#e9d8ff}.battle-champion-overlay>b{font-size:14px;color:#ffdb81}
 @media(max-width:850px){.battle-scoreboard{grid-template-columns:minmax(0,1fr) 125px minmax(0,1fr)}.battle-center button{font-size:10px;padding:8px}.battle-side>strong{font-size:37px}}
 @media(max-width:570px){.battle-body{padding:10px;gap:11px}.battle-config{padding:9px}.battle-roster-grid{gap:6px}.battle-roster-side{padding:8px}.battle-scoreboard{grid-template-columns:minmax(0,1fr) 98px minmax(0,1fr);gap:5px}.battle-side{min-height:180px;padding:12px 5px}.battle-side>strong{font-size:34px}.battle-side-head{font-size:9px}.battle-side>span{font-size:10px}.battle-side>small{font-size:9px}.battle-center>span{font-size:14px}.battle-center>b{font-size:9px}.battle-center button{font-size:9px;padding:7px 4px}.battle-vote-buttons button{font-size:11px;padding:11px 6px}.battle-headrow strong{font-size:13px}.battle-scene-score{top:84px;max-width:93%;font-size:10px}}
+
+/* v1.4 Avatar Studio — scoped to avoid changing Mixer, Party Games and Battle Arena */
+.avatar-edit-entry,.av-welcome-button{border:1px solid #c77aff!important;background:linear-gradient(120deg,#6b32b1,#aa4fd6)!important;color:#fff!important;font-weight:750!important;cursor:pointer}
+.av-welcome-button{width:100%;margin:10px 0 13px;padding:13px 16px;border-radius:12px;font-size:13px}
+.av-modal{position:fixed;inset:0;z-index:99000;background:rgba(7,5,20,.87);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(13px)}
+.av-modal.hidden{display:none!important}
+.av-dialog{width:min(950px,100%);max-height:min(92vh,880px);display:flex;flex-direction:column;border:1px solid #75409e;border-radius:19px;background:#18112b;box-shadow:0 24px 85px #000c;color:#f5edff;overflow:hidden}
+.av-head{padding:20px 24px;border-bottom:1px solid #ffffff21;display:flex;justify-content:space-between;gap:15px}
+.av-head small{font-size:10px;letter-spacing:2px;color:#c98cff;font-weight:800}
+.av-head h2{font-size:26px;margin:4px 0;color:white;line-height:1.2}
+.av-head p{color:#c2b1d4;font-size:13px;margin:0}
+.av-head>button{width:36px;height:36px;border:1px solid #ffffff32;border-radius:11px;background:#281c3d;color:white;cursor:pointer}
+.av-content{display:grid;grid-template-columns:minmax(220px,.9fr) minmax(270px,1.4fr);min-height:0;overflow:auto}
+.av-preview-col{padding:16px 16px 18px;border-right:1px solid #ffffff1b;text-align:center;display:flex;flex-direction:column;gap:8px}
+.av-preview{position:relative;background:radial-gradient(ellipse at 50% 40%,#38215b,#18112c 70%);height:330px;border-radius:14px;overflow:hidden}
+.av-preview canvas{width:100%;height:100%;display:block;touch-action:none}
+.av-preview-loading{position:absolute;left:0;right:0;top:50%;font-weight:bold;color:#c0a7dc;font-size:11px;letter-spacing:1px;pointer-events:none}
+.av-preview-col small{color:#a994c5;font-size:11px}
+.av-preview-col p{color:#af9ebf;font-size:11px;margin:0}
+.av-preview-col button{border:1px solid #9160bf;background:#33204a;color:#f8eaff;padding:10px;border-radius:9px;cursor:pointer}
+.av-options-col{padding:16px 20px;display:grid;gap:16px;align-content:start;max-height:490px;overflow:auto}
+.av-setting{display:grid;gap:8px}
+.av-setting strong{font-size:12px;color:#e7d6ff}
+.av-options-row{display:flex;flex-wrap:wrap;gap:7px}
+.av-option{padding:8px 11px;min-height:35px;min-width:61px;border:1px solid #60457f;background:#261b3c;color:#e4d5f3;border-radius:10px;cursor:pointer;font-size:12px}
+.av-option.selected{outline:2px solid #d690ff;outline-offset:1px;background:#633283}
+.av-swatch{position:relative;min-width:38px;width:38px;height:38px;padding:0;border-radius:50%;background:var(--swatch)}
+.av-swatch.selected::after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;text-shadow:0 1px 4px #000;font-size:15px}
+.av-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #ffffff25;padding:14px 22px}
+.av-foot small{max-width:58%;color:#b39fc7;font-size:11px}
+.av-foot>div{display:flex;gap:8px}
+.av-foot button{cursor:pointer;border-radius:10px;padding:10px 15px;border:1px solid #ffffff3d;background:#34254b;color:white;font-weight:bold}
+.av-foot #avatar-studio-done{background:linear-gradient(110deg,#9235d6,#c061c9);border-color:#d8a1ee}
+@media(max-width:720px){.av-modal{padding:7px}.av-dialog{max-height:95dvh}.av-content{grid-template-columns:1fr}.av-preview-col{border:0;border-bottom:1px solid #ffffff20}.av-preview{height:210px}.av-options-col{max-height:280px;grid-template-columns:1fr 1fr;padding:12px}.av-head{padding:15px}.av-head h2{font-size:21px}.av-foot{padding:10px;flex-wrap:wrap}.av-foot small{max-width:100%}}
+
+/* Camera navigation remains scrollable with the new cinematic mode. */
+.camera-options{max-width:100%;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#775591 transparent}
+.camera-options .camera-button{flex:0 0 auto}
+@media(max-width:900px){.stage-head{flex-wrap:wrap}.camera-options{width:100%}}
+
+.av-swatch.selected{background:var(--swatch)!important}

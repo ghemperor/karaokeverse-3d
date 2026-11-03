@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { normalizeAvatarProfile, profilesEqual, AVATAR_PALETTES, AVATAR_EMOTES } from './avatar-profile.js';
+import { applyAvatarAppearance } from './avatar-materials.js';
 import { getSofaSeat, isWalkingPositionBlocked, standFromSofa, SINGING_ARM } from './avatar-interactions.js';
 import { GIFT_BY_ID } from './gift-data.js';
 
@@ -252,11 +255,60 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     edge(side*6.68,2.47,-2.26,side*6.68,3.77,-2.26,0xbd66ff,.015);
     void shelf;void artwork;
   }
+  // Original, locally bundled GLB with embedded animations. If it cannot load,
+  // legacy procedural avatars remain fully usable rather than disappearing.
+  const glbLoader=new GLTFLoader();
+  let avatarAsset=null;
+  const avatarAssetReady=glbLoader.loadAsync('/models/karaoke-avatar.glb')
+    .then(asset=>{avatarAsset=asset;for(const group of userGroups.values())installAvatarGLB(group);return true;})
+    .catch(error=>{console.warn('GLB avatar unavailable; using procedural fallback',error);return false;});
+  function installAvatarGLB(group){
+    if(!avatarAsset||group.userData.model||disposed)return;
+    const model=avatarAsset.scene.clone(true);
+    model.name='KaraokeGLB';
+    model.traverse(obj=>{if(obj.isMesh){obj.userData.sharedAvatarGeometry=true;obj.castShadow=true;}});
+    group.add(model);
+    group.userData.model=model;
+    group.userData.mixer=new THREE.AnimationMixer(model);
+    group.userData.actions=new Map(avatarAsset.animations.map(clip=>[clip.name,group.userData.mixer.clipAction(clip)]));
+    group.userData.currentAction=null;
+    group.userData.hips.visible=false;
+    applyAvatarAppearance(model,group.userData.profile,THREE);
+    updateGLBAction(group,'idle');
+  }
+  function updateGLBAction(group,clipName){
+    const d=group.userData;
+    if(!d.model||d.currentAction===clipName)return;
+    const next=d.actions.get(clipName)||d.actions.get('idle');
+    if(!next)return;
+    const prev=d.actions.get(d.currentAction);
+    next.reset().setLoop(THREE.LoopRepeat,Infinity).fadeIn(.2).play();
+    if(prev&&prev!==next)prev.fadeOut(.2);
+    d.currentAction=clipName;
+  }
+  function applyAvatarProfile(id,profile){
+    const group=userGroups.get(id);
+    if(!group)return false;
+    const d=group.userData;
+    const safe=normalizeAvatarProfile(profile);
+    if(profilesEqual(d.profile,safe))return true;
+    d.profile=safe;
+    if(d.model)applyAvatarAppearance(d.model,safe,THREE);
+    else{
+      d.cloth.color.setHex(AVATAR_PALETTES.outfit[safe.outfit]);
+      d.skin.color.setHex(AVATAR_PALETTES.skin[safe.skin]);
+      d.hairMaterial.color.setHex(AVATAR_PALETTES.hair[safe.hair]);
+      d.dark.color.setHex(AVATAR_PALETTES.pants[safe.pants]);
+    }
+    return true;
+  }
   const userGroups = new Map();
   const avatarPositions=[[-2.3,.4,.7],[2.3,.4,.7],[-4.75,.4,1.0],[4.75,.4,1.0],[-2.9,.4,3.0],[2.9,.4,3.0],[-.95,.4,4.0],[.95,.4,4.0]];
   let localUserId = null;
   let performerId = null;
   let currentPose = 'stand';
+  let cinematicStartAt=performance.now();
+  const cinematicLook=new THREE.Vector3(0,1.65,-2.2);
   let selectedView = 'front';
   let isSeated = false;
   let seatedSofaIndex = null;
@@ -294,10 +346,11 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   // Procedural, articulated low-poly character; no external model files required.
   function makeAvatar(user,index){
     const group=new THREE.Group();
-    const color=COLORS[user.avatar % COLORS.length];
-    const cloth=basicMat(color,{roughness:.85});
-    const skin=basicMat([0xf0c7a1,0xffd8b6,0xd6a58e,0xf1b9aa][index%4],{roughness:.92});
-    const dark=basicMat(0x232033,{roughness:.85});
+    const profile=normalizeAvatarProfile(user.avatarProfile);
+    const cloth=basicMat(AVATAR_PALETTES.outfit[profile.outfit],{roughness:.85});
+    const skin=basicMat(AVATAR_PALETTES.skin[profile.skin],{roughness:.92});
+    const dark=basicMat(AVATAR_PALETTES.pants[profile.pants],{roughness:.85});
+    const hairMaterial=basicMat(AVATAR_PALETTES.hair[profile.hair]);
     const accent=basicMat(0xf5f0ff,{roughness:.68});
     function part(parent,geom,mat,x,y,z){
       const mesh=new THREE.Mesh(geom,mat);mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;
@@ -309,7 +362,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     part(torso,new THREE.BoxGeometry(.38,.09,.035),accent,0,.37,-.285);
     const head=new THREE.Group();head.position.set(0,.94,0);hips.add(head);
     part(head,new THREE.SphereGeometry(.33,18,12),skin,0,0,0);
-    const hair=part(head,new THREE.SphereGeometry(.34,18,12,0,Math.PI*2,0,Math.PI*.52),dark,0,.065,0);
+    const hair=part(head,new THREE.SphereGeometry(.34,18,12,0,Math.PI*2,0,Math.PI*.52),hairMaterial,0,.065,0);
     hair.scale.z=1.04;
     for(const ex of [-.125,.125]){
       part(head,new THREE.SphereGeometry(.029,8,8),dark,ex,.025,-.30);
@@ -348,24 +401,26 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     indicator.rotation.x=Math.PI/2;indicator.position.y=.045;group.add(indicator);
     const [x,,z]=avatarPositions[index%avatarPositions.length];
     group.position.set(user.pos?.x ?? x,0,user.pos?.z ?? z);
-    group.userData={indicator,hips,torso,head,arms,forearms,legs,mic,mouth,seed:index,
+    group.userData={indicator,hips,torso,head,arms,forearms,legs,mic,mouth,seed:index,profile,cloth,skin,dark,hairMaterial,
       target:new THREE.Vector3(group.position.x,0,group.position.z),
       yaw:user.pos?.yaw||0,pose:user.pos?.pose||'stand',muted:user.muted,
       lastX:group.position.x,lastZ:group.position.z,walkAmount:0};
-    scene.add(group);return group;
+    scene.add(group);installAvatarGLB(group);return group;
   }
   function setMembers(users){
     const usersById=new Map(users.map(u=>[u.id,u]));
     for(const [id,g] of userGroups){
       if(!usersById.has(id)){
         scene.remove(g);
-        g.traverse(obj=>{obj.geometry?.dispose();if(obj.material){obj.material.map?.dispose?.();obj.material.dispose?.()}});
+        g.userData.mixer?.stopAllAction();
+        g.traverse(obj=>{if(obj.geometry&&!obj.userData.sharedAvatarGeometry)obj.geometry.dispose();if(obj.material){if(!obj.userData.sharedAvatarGeometry)obj.material.map?.dispose?.();obj.material.dispose?.()}});
         userGroups.delete(id);
       }
     }
     users.forEach((u,i)=>{
       if(!userGroups.has(u.id))userGroups.set(u.id,makeAvatar(u,i));
       const group=userGroups.get(u.id);const [x,,z]=avatarPositions[i%avatarPositions.length];
+      applyAvatarProfile(u.id,u.avatarProfile);
       const pos=u.pos || {x,z,yaw:0,pose:'stand'};
       if(u.id!==localUserId || !['walk','follow'].includes(selectedView)){
         group.userData.target.set(pos.x,0,pos.z);
@@ -442,6 +497,14 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   function setView(name){
     if(name==='walk'){enterWalk();return;}
     if(name==='follow'){enterFollow();return;}
+    if(name==='cinematic'){
+      selectedView='cinematic';cinematicStartAt=performance.now();
+      controls.enabled=false;camera.fov=54;camera.updateProjectionMatrix();
+      for(const g of userGroups.values())g.visible=true;
+      callbacks.onViewChange?.('cinematic');
+      callbacks.onHint?.('🎬 Camera tự chuyển cảnh theo người biểu diễn, khán giả và sân khấu');
+      return;
+    }
     const view=VIEWS[name]||VIEWS.front;
     // Changing cameras must not silently remove the seated state.
     selectedView=name;
@@ -545,7 +608,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   }
   function setPerformance(id){performerId=id||null;}
   function setEmote(pose){
-    if(!['stand','dance','clap','wave'].includes(pose))return;
+    if(!AVATAR_EMOTES.includes(pose))return;
     if(isSeated)standUp();
     currentPose=pose;
     sendMovement(true);
@@ -663,7 +726,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     return !!node?.closest?.('input, textarea, select, [contenteditable="true"]');
   };
   const onKeyDown=e=>{
-    if(!['walk','follow'].includes(selectedView)||activeInput())return;
+    if(!['walk','follow'].includes(selectedView)||activeInput()||!document.getElementById('avatar-studio-modal')?.classList.contains('hidden'))return;
     if(['KeyW','ArrowUp'].includes(e.code))movement.forward=true;
     else if(['KeyS','ArrowDown'].includes(e.code))movement.back=true;
     else if(['KeyA','ArrowLeft'].includes(e.code))movement.left=true;
@@ -775,6 +838,26 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
         const rect=renderer.domElement.getBoundingClientRect();
         setHighlight(hitAt(rect.left+rect.width/2,rect.top+rect.height/2,true));
       }
+    } else if(selectedView==='cinematic'){
+      // Three scene shots: singer close-up, audience reverse, wide-room reveal.
+      const elapsed=(performance.now()-cinematicStartAt)/1000;
+      const phase=Math.floor(elapsed/5.8)%3;
+      const subject=userGroups.get(performerId);
+      const focus=subject?.position||new THREE.Vector3(0,0,-2.22);
+      let dest,look;
+      if(phase===0){
+        dest=new THREE.Vector3(focus.x+2.5,2.35,focus.z+3.6);
+        look=new THREE.Vector3(focus.x,1.45,focus.z);
+      }else if(phase===1){
+        dest=new THREE.Vector3(-4.6,2.7,4.55);
+        look=new THREE.Vector3(1.8,1.45,1.7);
+      }else{
+        dest=new THREE.Vector3(5.0,4.0,6.05);
+        look=new THREE.Vector3(0,1.8,-2.45);
+      }
+      camera.position.lerp(dest,Math.min(1,dt*1.45));
+      cinematicLook.lerp(look,Math.min(1,dt*1.5));
+      camera.lookAt(cinematicLook);
     } else if(controls.enabled)controls.update();
     for(const [id,g] of userGroups){
       const d=g.userData;
@@ -787,6 +870,15 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       g.rotation.y=THREE.MathUtils.damp(g.rotation.y,-d.yaw,8,dt);
       const pose=id===performerId?'sing':d.pose;
       const seated=pose==='sit',dance=pose==='dance',clap=pose==='clap',wave=pose==='wave',sing=pose==='sing';
+      if(d.model){
+        const selected=sing?'sing':d.walkAmount>.18&&!seated?'walk':AVATAR_EMOTES.includes(pose)?(pose==='stand'?'idle':pose):seated?'sit':'idle';
+        updateGLBAction(g,selected);
+        const micNode=d.model.getObjectByName('Mic');
+        if(micNode)micNode.visible=sing;
+        d.mixer.update(dt);
+        if(!d.muted)d.indicator.scale.setScalar(1+Math.sin(t*5+d.seed)*.07);
+        continue;
+      }
       const gait=Math.sin(t*10+d.seed)*d.walkAmount;
       const bounce=dance?Math.abs(Math.sin(t*5))*.12:Math.abs(gait)*.038;
       d.hips.position.y=THREE.MathUtils.damp(d.hips.position.y,seated?.63:.94+bounce,10,dt);
@@ -838,5 +930,5 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){obj.material.map?.dispose?.();obj.material.dispose?.()}});
     webglContainer.replaceChildren();cssContainer.replaceChildren();
   }
-  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,setView,setEmote,setPerformance,setWorldState,setBattleState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,dispose};
+  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,applyAvatarProfile,setView,setEmote,setPerformance,setWorldState,setBattleState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,dispose};
 }

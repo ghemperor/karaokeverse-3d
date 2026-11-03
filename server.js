@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
 import { youtubeId, cleanName, cleanText, cleanRoomCode, cleanAvatar } from './lib/validation.js';
 import { cleanPosition } from './lib/position.js';
+import { normalizeAvatarProfile, profilesEqual } from './public/avatar-profile.js';
 import { createWorld, updateWorld, cleanEmote } from './lib/world.js';
 import { createPerformance, requestPerformance, leavePerformance, nextPerformance } from './lib/performance.js';
 import { createPartyGames, startSpin, passStage, openPoll, castVote, closePoll, publicParty, memberLeavesParty, CHALLENGES } from './lib/party-games.js';
@@ -142,7 +143,7 @@ function joinRoom(socket, room, details = {}) {
   if (room.users.size >= MAX_PEOPLE) return { ok: false, error: 'Phòng đã đủ 8 người.' };
   const user = {
     id: socket.id, name: cleanName(details.name), avatar: cleanAvatar(details.avatar),
-    muted: true, joinedAt: Date.now(), pos:null,
+    muted: true, joinedAt: Date.now(), pos:null, avatarProfile:normalizeAvatarProfile(details.avatarProfile),
   };
   room.users.set(socket.id, user);
   socket.data.room = room.code;
@@ -191,6 +192,21 @@ io.on('connection', (socket) => {
     socket.data.lastMoveAt=now;
     room.users.get(socket.id).pos=pos;
     socket.to(room.code).emit('user:moved',{id:socket.id,pos});
+  });
+  // Server validates all appearance changes and fans them out only to this room.
+  socket.on('avatar:update', (payload, ack) => {
+    const room=getRoom(socket);
+    if(!room)return ack?.({ok:false,error:'Bạn chưa tham gia phòng.'});
+    const now=Date.now();
+    if(now-(socket.data.lastAvatarAt||0)<160)
+      return ack?.({ok:false,error:'Hãy chỉnh avatar chậm hơn một chút.'});
+    const profile=normalizeAvatarProfile(payload);
+    const user=room.users.get(socket.id);
+    if(profilesEqual(profile,user.avatarProfile))return ack?.({ok:true,profile});
+    socket.data.lastAvatarAt=now;
+    user.avatarProfile=profile;
+    io.to(room.code).emit('user:avatar',{id:socket.id,profile});
+    ack?.({ok:true,profile});
   });
   socket.on('world:action', (payload, ack) => {
     const room = getRoom(socket);

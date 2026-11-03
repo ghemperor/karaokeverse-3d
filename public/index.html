@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0920"/>
   <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
-  <title>KaraokeVerse 3D v1.3 • Battle Arena</title>
+  <title>KaraokeVerse 3D v1.4 • Avatar Studio</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -32,7 +32,7 @@
         <div class="tip"><span>✦</span><p>Video được phát từ trình nhúng YouTube. Một số video có thể không cho phép phát trên website khác.</p></div>
       </aside>
       <section class="center-stage">
-        <div class="stage-head"><div class="breadcrumb"><span class="stage-live">● LIVE ROOM</span><span class="slash">/</span><span id="stage-room-name">The Neon Lounge</span></div><div class="camera-options"><button class="camera-button active" data-view="front">◉ Sân khấu</button><button class="camera-button" data-view="wide">▦ Toàn phòng</button><button class="camera-button" data-view="orbit">⟳ Xoay 360°</button><button class="camera-button" data-view="walk">◉ Góc mắt</button><button class="camera-button" data-view="follow">♙ Theo nhân vật</button><button class="camera-button" data-view="tv">▣ Xem TV</button></div></div>
+        <div class="stage-head"><div class="breadcrumb"><span class="stage-live">● LIVE ROOM</span><span class="slash">/</span><span id="stage-room-name">The Neon Lounge</span></div><div class="camera-options"><button class="camera-button active" data-view="front">◉ Sân khấu</button><button class="camera-button" data-view="wide">▦ Toàn phòng</button><button class="camera-button" data-view="orbit">⟳ Xoay 360°</button><button class="camera-button" data-view="walk">◉ Góc mắt</button><button class="camera-button" data-view="follow">♙ Theo nhân vật</button><button class="camera-button" data-view="tv">▣ Xem TV</button><button class="camera-button" data-view="cinematic">🎬 Cinematic</button></div></div>
         <div class="stage-scene" id="stage-scene">
           <div id="scene-webgl" class="scene-layer"></div>
           <div id="scene-css3d" class="scene-layer scene-css3d"></div>
@@ -68,7 +68,7 @@
             <button class="party-btn" data-emote="wave" disabled>👋 Chào</button>
             <button class="party-btn" data-emote="clap" disabled>👏 Vỗ tay</button>
             <button class="party-btn" data-emote="dance" disabled>💃 Nhảy</button>
-            <button class="party-btn" data-emote="stand" disabled>🧍 Đứng</button>
+            <button class="party-btn" data-emote="stand" disabled>🧍 Đứng</button><button class="party-btn" data-emote="cheer" disabled>🙌 Cổ vũ</button><button class="party-btn" data-emote="bow" disabled>🙇 Cúi chào</button><button class="party-btn" data-emote="heart" disabled>💖 Thả tim</button><button class="party-btn avatar-edit-entry" id="avatar-edit-room" type="button">✨ Avatar Studio</button>
             <button class="party-btn" id="party-light" disabled>💡 Đèn</button>
             <button class="party-btn" id="party-mode" disabled>🪩 Party mode</button>
           </div>
@@ -239,16 +239,27 @@
         <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
       </aside>
     </main>
-    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.3 • BATTLE ARENA</span></footer>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.4 • AVATAR STUDIO</span></footer>
   </div>
   <div id="welcome-screen" class="modal-layer">
     <div class="welcome-glow"></div>
     <div class="welcome-modal"><div class="welcome-icon">♫</div><div class="overline">THE STAGE IS YOURS</div><h1>Hát hết mình.<br/><em>Chill hết nấc.</em></h1><p>Phòng karaoke 3D dành cho hội bạn thân. Xem YouTube, bật micro và hát cùng nhau mọi lúc mọi nơi.</p>
       <label class="field-label" for="name-input">BẠN MUỐN MỌI NGƯỜI GỌI LÀ GÌ?</label>
       <input id="name-input" maxlength="26" placeholder="Nhập biệt danh của bạn..." autocomplete="nickname"/>
-      <label class="field-label">CHỌN AVATAR</label><div class="avatar-picker" id="avatar-picker"></div>
+      <label class="field-label">BIỂU TƯỢNG THÀNH VIÊN</label><div class="avatar-picker" id="avatar-picker"></div><button class="av-welcome-button" id="avatar-edit-welcome" type="button">✨ TÙY CHỈNH NHÂN VẬT 3D • Avatar Studio</button>
       <div class="welcome-actions"><button class="gradient-button" id="create-room">✦ Tạo phòng mới</button><div class="or-divider">hoặc tham gia bằng mã</div><div class="join-inline"><input id="join-code" maxlength="8" placeholder="Mã phòng 6 ký tự" autocomplete="off"/><button id="join-room">Tham gia →</button></div></div>
       <small>🎧 Nên sử dụng tai nghe để hạn chế tiếng vọng khi bật micro.</small>
+    </div>
+  </div>
+
+  <div id="avatar-studio-modal" class="av-modal hidden" role="dialog" aria-modal="true" aria-labelledby="avatar-studio-title" aria-hidden="true">
+    <div class="av-dialog">
+      <div class="av-head"><div><small>KARAOKEVERSE • CHARACTER CREATOR</small><h2 id="avatar-studio-title">✨ AVATAR STUDIO</h2><p>Tạo phong cách riêng, bạn bè sẽ nhìn thấy nhân vật của bạn.</p></div><button id="avatar-studio-close" type="button" aria-label="Đóng Avatar Studio">✕</button></div>
+      <div class="av-content">
+        <div class="av-preview-col"><div id="avatar-studio-preview" class="av-preview"><div class="av-preview-loading">GLB AVATAR • 3D PREVIEW</div></div><small id="avatar-studio-status">Mở để xem mẫu 3D</small><button type="button" id="avatar-studio-preview-pose">▶ Thử nhảy</button><p>Kéo chuột hoặc vuốt màn hình để xoay nhân vật.</p></div>
+        <div class="av-options-col" id="avatar-studio-options"></div>
+      </div>
+      <div class="av-foot"><small>Lựa chọn lưu trên trình duyệt, đồng bộ trong phòng đang tham gia. Không cần tài khoản.</small><div><button id="avatar-studio-reset" type="button">↺ Mặc định</button><button id="avatar-studio-done" type="button">✓ Hoàn tất</button></div></div>
     </div>
   </div>
   <div id="toast-stack" aria-live="polite"></div>

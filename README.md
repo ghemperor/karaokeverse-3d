@@ -1,84 +1,70 @@
-# KaraokeVerse 3D v1.3 — BATTLE ARENA
+# KaraokeVerse 3D v1.4 — AVATAR STUDIO & CINEMATIC
 
-Bản nâng cấp trực tiếp từ KaraokeVerse v1.2.5 (Virtual Gifts & Celebration). Chạy trên Node.js + Express + Socket.IO; giao diện React-free vanilla JS; thế giới 3D Three.js từ CDN, YouTube IFrame API, WebRTC voice, Web Audio mixer/Auto-Tune.
+**Bản nâng cấp trực tiếp từ v1.3 Battle Arena**, giữ Node.js + Express + Socket.IO, Three.js (ES modules CDN), WebRTC, YouTube IFrame API, Karaoke Mixer Pro và Auto-Tune Lab.
 
-## Tính năng v1.3 mới
+## Tính năng mới
 
-- **Solo Battle (1 vs 1):** chủ phòng chọn hai ca sĩ, từ 1 đến 5 vòng.
-- **Team Battle:** chủ phòng tạo hai đội Đỏ/Xanh, mỗi bên từ 1 đến 4 người, tổng người trong phòng tối đa 8; người hát của mỗi đội được luân phiên theo vòng.
-- **Vòng đấu do máy chủ điều khiển:** hát A → hát B → bầu chọn 45 giây → tổng kết vòng → vòng kế tiếp / trao giải chung cuộc.
-- **Bình chọn có xác thực:** mỗi người một phiếu/vòng; hai ca sĩ vừa biểu diễn ở vòng đó không được bỏ phiếu; một người không thể gửi nhiều phiếu; người ngoài phòng không được bỏ phiếu. Thành viên khác (kể cả đồng đội không hát trong vòng) có thể bình chọn A hoặc B.
-- **Điểm thực:** bên nhiều phiếu hơn được 1 điểm; hòa có phiếu được 0,5 điểm mỗi bên; nếu không có phiếu thì không bên nào được cộng điểm. Có bảng điểm trực tiếp, lịch sử phiếu từng vòng và công bố bên thắng chung cuộc.
-- **Three.js Battle Stage:** hai khu vực sân khấu Đỏ/Xanh, spotlight di chuyển theo lượt hát, bảng tỉ số 3D ở phía trước và hiệu ứng vương miện/pháo giấy khi vô địch.
-- **Đồng bộ Socket.IO:** kết quả và tiến độ do máy chủ lưu trong RAM, gửi tới mọi thành viên, kể cả người vào giữa trận. Chủ phòng có thể kết thúc bình chọn sớm hoặc hủy trận.
-- **Chống xung đột:** tạm ngăn truyền micro thủ công, đăng ký lượt hát thường và mở Party Poll khi Battle đang hoạt động; sau trận khôi phục danh sách ca sĩ/hàng chờ cũ trong khả năng có người còn ở phòng.
+1. **Avatar Studio:** nhấn `✨ Avatar Studio` ở màn hình vào phòng hoặc dưới sân khấu. Tùy chỉnh **màu da, tóc, áo, quần, giày, kiểu tóc (3 mẫu), phụ kiện (không/kính/tai nghe), dáng người (3 mẫu)**; xem trước GLB 3D và xoay bằng chuột hoặc cảm ứng. Nút Thử nhảy chạy clip `dance` trên preview.
+2. **GLB thực có animation:** `public/models/karaoke-avatar.glb` là asset **tự xây dựng**, không tải từ kho mô hình bên ngoài; ~23 KB, nhiều vật thể hình học đơn giản, 10 embedded keyframe clips `idle`, `walk`, `sit`, `sing`, `dance`, `wave`, `clap`, `cheer`, `bow`, `heart`. Sử dụng **GLTFLoader + AnimationMixer** để nạp và chuyển clip mượt. Là animation theo node hierarchy, **chưa phải skinned-character hoặc motion-capture**. Giữ nhân vật low-poly procedural từ v1.3 làm **fallback** nếu GLB tải lỗi.
+3. **Emotes mở rộng:** vẫy tay, vỗ tay, nhảy, đứng, cổ vũ, cúi chào và thả tim. Hành động được báo tới người chơi khác bằng Socket.IO.
+4. **Multiplayer avatar appearance:** backend xác thực palette hợp lệ (`avatar:update`) và đồng bộ `user:avatar` cho tất cả người trong cùng phòng. Người mới tham gia thấy thiết kế hiện tại của mọi người từ `room:state`. Không thể nhập đường dẫn GLB hay URL từ client qua sự kiện này.
+5. **Camera cinematic:** nhấn `🎬 Cinematic` trên thanh góc quay để xem ba góc quay thay đổi luân phiên: cận người đang hát, khu vực khán giả và toàn cảnh sân khấu. Nhấn các góc khác để dừng.
+6. **Lưu tùy chọn:** dùng localStorage trên **thiết bị/trình duyệt hiện tại**. Chưa có tài khoản và cloud-sync, nên khi đổi thiết bị hoặc xóa dữ liệu trình duyệt sẽ phải chọn lại avatar.
 
-### Giữ nguyên từ v1.2.5
+### Giữ nguyên v1.3
 
-- Tạo phòng / link mời, tối đa 8 người, chat/emoji, avatar nhân vật, góc nhìn first person & third person, ngồi ghế / tương tác đồ vật.
-- Màn hình 3D phát YouTube qua nhúng chính thức và hàng chờ.
-- WebRTC voice chat, cấu hình STUN/TURN thông qua biến môi trường; Open Mic / Push to Talk.
-- Auto-Tune Lab, Mixer Pro (EQ, gain, Echo, Reverb, Compression, preset, chỉnh nhạc và loa tại máy).
-- Party Games (vòng quay, thử thách, bình chọn ngoài Battle), quà tặng ảo, bảng cổ vũ và lễ trao giải Party Games.
+- Solo/Team Battle, bảng điểm/vòng thi/voting và trao giải.
+- Party Games: vòng quay, thử thách, truyền lượt hát và bình chọn.
+- Quà tặng ảo 3D, tương tác đồ vật, phòng có nhiều người, ngồi sofa và đứng dậy cạnh ghế.
+- Youtube embed, hàng chờ và đồng bộ trạng thái phát.
+- Micro WebRTC qua STUN/TURN, Auto-Tune Lab, Karaoke Mixer Pro (Echo/Reverb/EQ), chat, emoji, ánh sáng và disco.
 
-## Chạy trên Windows
+## Khởi chạy Windows
 
-1. Cài **Node.js 20 trở lên** (đề nghị LTS 22).
-2. Giải nén dự án, mở `CHAY-TREN-WINDOWS.bat`.
-3. Mở trình duyệt tại `http://localhost:3002` (cổng mặc định).
-4. Nếu 3002 bận, chạy `CHAY-TREN-WINDOWS.bat 3003` trong Command Prompt từ thư mục dự án.
+Cài Node.js LTS 22. Giải nén rồi chạy `CHAY-TREN-WINDOWS.bat` và mở `http://localhost:3002`.
+Nếu cổng 3002 đã bị chiếm, dùng CMD trong thư mục dự án: `CHAY-TREN-WINDOWS.bat 3003`.
 
-Dùng CMD trực tiếp:
+Từ terminal:
 
-```bat
+```bash
 npm install
-set PORT=3002
+npm run check
 npm start
 ```
 
-## Cách chơi Battle Arena
+`PORT=3002 npm start` trên Linux/Mac; với PowerShell: `$env:PORT=3002; npm start`.
 
-1. Chủ phòng tạo phòng. Mời bạn bè bằng đường dẫn phòng.
-2. Mở **⚔️ BATTLE ARENA • SOLO & TEAM** bên dưới sân khấu.
-3. Chọn Solo (1 người mỗi bên) hoặc Team (1–4 người mỗi bên). Hai đội không được trùng thành viên. Chọn 1–5 vòng.
-4. Nhấn **Bắt đầu trận đấu**. Chỉ chủ phòng có quyền này.
-5. Ca sĩ Đỏ biểu diễn: người chơi tự bật mic; chủ phòng điều khiển bài hát YouTube nếu muốn.
-6. Chủ phòng nhấn **Lượt hát của B**. Ca sĩ Xanh biểu diễn.
-7. Nhấn **Mở bình chọn 45 giây**. Các thành viên đủ điều kiện bình chọn một lần. Hệ thống tự chốt sau 45 giây hoặc chủ phòng chốt sớm.
-8. Nhấn **Vòng tiếp theo**, lặp lại. Sau vòng cuối nhấn **Trao cúp chung cuộc**. Game phát hiệu ứng cả phòng.
-9. Người tham gia có thể xem điểm số, số phiếu và lịch sử các vòng.
+**Internet:** giao diện Three.js đang import từ CDN qua importmap; cần mạng để tải thư viện. Video YouTube cần cho phép nhúng. GLB avatar được phục vụ từ chính Node server (`/models/karaoke-avatar.glb`), không phụ thuộc kho asset khác.
 
-**Chú ý:** Trong phòng chỉ có đúng 2 người thi Solo và không có khán giả, cả hai ca sĩ không được bỏ phiếu vòng đó. Điểm sẽ là 0–0 (hòa) cho tới khi có thêm người xem. Hãy mời ít nhất một khán giả để chấm điểm. Không có cơ chế AI tự chấm cao độ. Trận Team 4v4 cũng cần phân công người không hát trong vòng đó để bình chọn.
+## Kiểm thử v1.4
 
-Hành động trên game chỉ thay đổi **lượt biểu diễn**; ứng dụng **không bật micro vật lý thay người dùng**, phù hợp với quyền riêng tư trình duyệt.
+Trước khi mở phòng cho bạn bè, kiểm tra tuần tự:
 
-## Deploy lên Render đã có sẵn
+1. Mở Avatar Studio ở màn hình chào. Xem avatar 3D, xoay, thử nhảy, đổi 2–3 màu và nhấn Hoàn tất.
+2. Tạo phòng A, mời thiết bị B bằng link. Ở A đổi màu áo/tóc — trên B phải đổi đúng sau khi sự kiện Socket.IO được nhận.
+3. A bật camera Theo nhân vật, đi WASD; B nhìn nhân vật A di chuyển và hoạt ảnh đi bộ.
+4. A ngồi sofa, đứng dậy tại ghế, đăng ký hát và thử tư thế cầm micro; B xem hoạt ảnh hát.
+5. Thử emote Cổ vũ/Cúi chào/Thả tim; các màn hình phải cùng thấy.
+6. Chọn Cinematic, kiểm tra đổi góc quay; chuyển sang Xoay 360° để thoát.
+7. Thử YouTube, micro 2 mạng, Auto-Tune, Echo/Reverb, Party Games, Quà tặng và 1 trận Battle.
+8. F5 tải lại trang: ngoại hình trên trình duyệt đó được giữ, nhưng phòng có thể cần tham gia lại.
 
-Xem `HUONG-DAN-DEPLOY.md`. Upload bộ cập nhật GitHub đi kèm (các file trong gói) vào đúng thư mục repository đang kết nối với Render, commit lên nhánh `main`. Nếu Render bật Auto Deploy, nó tự xây dựng phiên bản mới. Không cần thêm biến môi trường chỉ để chạy Battle.
+**Giới hạn kiểm chứng:** đã chạy tests Node, kiểm tra cấu trúc GLB qua parser/trimesh và cú pháp; **chưa kiểm thử chất lượng hoạt ảnh và WebGL trên thiết bị thật, cũng chưa kiểm thử nhiều trình duyệt với Render/TURN**. Không thể đảm bảo hoạt ảnh hoàn toàn tự nhiên trên mọi thiết bị.
 
-Để kiểm tra máy chủ: `https://TEN-SERVICE.onrender.com/health`.
+## Deploy Render đã có sẵn
 
-**Giữ nguyên** các biến `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD` đang có trên Render. Không đưa secrets vào GitHub. Vì cấu hình WebRTC hiện tại trả TURN credentials trong `/config`, nên với website công khai cần nâng cấp cơ chế cấp thông tin TURN ngắn hạn trước khi vận hành lâu dài.
+Xem `HUONG-DAN-DEPLOY.md`. Để cập nhật từ v1.3, giải nén **KaraokeVerse-v1.4-GitHub-Update.zip**, upload **cả thư mục** lên GitHub và giữ nguyên đường dẫn; đặc biệt phải có `public/models/karaoke-avatar.glb`, `public/avatar-studio.js`, `public/avatar-profile.js`, `public/avatar-materials.js`. Sau commit, Auto Deploy (nếu bật) sẽ chạy. Tải mới bằng Ctrl+Shift+R.
 
-## Test & giới hạn
+Không có biến môi trường mới. Giữ ba biến `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD` trên Render (đừng đưa vào GitHub). Mã cũ vẫn công khai TURN credentials cố định thông qua `/config`; trước khi ra mắt công khai lâu dài nên dùng TURN credentials ngắn hạn hoặc LiveKit SFU. Render restart làm mất phòng vì chưa có DB.
 
-```bash
-npm run check
-```
+## Tùy biến asset GLB
 
-- Bộ kiểm thử cú pháp và Node.js tests bao gồm toán điểm, kiểm soát phiếu, vòng đấu, thành viên rời phòng, hiển thị trạng thái công khai và kiểm thử hồi quy của các tính năng cũ.
-- Giao diện Battle đã được chạy thử bằng Chromium với người chơi giả lập; chưa kiểm thử hai người thực trên hai mạng Internet, cũng chưa xác nhận hiệu ứng WebGL 3D trên máy người dùng.
-- Phòng và trận đấu **chỉ được giữ trong RAM** của một Node.js instance; Render restart sẽ làm mất dữ liệu. Nếu mở rộng qua nhiều instance, cần session store / sticky session + Socket.IO adapter.
-- Hạn chế autoplay, video không cho nhúng và quảng cáo YouTube vẫn thuộc chính sách trình nhúng chính thức.
-- WebRTC mesh hiện thích hợp MVP nhỏ; phòng đông có thể cần SFU/LiveKit. TURN có thể phát sinh chi phí băng thông.
-- Không có tài khoản, tiền thật hay phần thưởng quy đổi tiền. Quà tặng chỉ là hoạt ảnh miễn phí.
+- Asset gốc do script `scripts/build-avatar-glb.py` tạo bằng `trimesh` và `numpy` (phụ thuộc chỉ ở bước **tạo model**, không cần trên web server). Script dựng hình khối, cấu trúc node và clip animation, xuất GLB tự chứa.
+- Khi thay bằng GLB riêng, phải đảm bảo tên clip tương ứng (`idle`,`walk`,`sit`,`sing`,...) và đối tượng có tên tương ứng (`Head`, `Mic`, `OutfitBody`, `HairBangs`, ...), hoặc sửa `public/avatar-materials.js` và `scene.js`.
+- Chưa hỗ trợ người chơi upload tệp GLB tùy ý để chia sẻ với các thành viên. Việc đó cần hệ thống lưu trữ và kiểm soát nội dung/định dạng tập tin.
 
-## Tập tin v1.3
+## Bảo mật / vận hành
 
-- `lib/battle.js` — luật chơi/điểm số thuần JS, server-authoritative.
-- `public/battle-ui.js` — bảng điều khiển cuộc thi.
-- `server.js` — events `battle:start`, `battle:advance`, `battle:vote`, `battle:cancel`; đồng bộ `battle:state`, `battle:champion`.
-- `public/scene.js` — đèn sân khấu đối kháng, neon, 3D score banner và animation trao giải.
-- `tests/battle.test.js` — test vòng đấu, phiếu, phân đội, tie, disconnect.
+Room/avatar state lưu RAM, người chơi tự chọn biệt danh, không có xác thực tài khoản. Profile được giới hạn theo palette trên server; không lưu dữ liệu nhạy cảm, không tự bật mic. WebRTC P2P có thể cần TURN trên các mạng NAT; phòng đông nên chuyển SFU.
 
-© Demo KaraokeVerse. Three.js và các thư viện khác theo giấy phép tương ứng.
+© Demo KaraokeVerse. Model GLB trong gói do script đi kèm tự tạo. Các thư viện thứ ba theo giấy phép tương ứng.
