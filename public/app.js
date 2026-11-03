@@ -1,6 +1,8 @@
 import { AUTOTUNE_DEFAULTS, NOTE_NAMES, normalizeAutotune } from './autotune-math.js';
 import { MIXER_DEFAULTS, MIXER_RANGES, normalizeMixer, presetMixer, createKaraokeMixer } from './audio-mixer.js';
 import { createPartyUI } from './party-ui.js';
+import { createGiftUI } from './gift-ui.js';
+import { createBattleUI } from './battle-ui.js';
 
 const $ = (id) => document.getElementById(id);
 const AVATARS = ['😎','🤩','🥳','🦊','🐱','🐼','👽','🐻'];
@@ -87,6 +89,19 @@ const partyUI = createPartyUI({
   toast,
   celebrate:(emoji)=>{createReaction(emoji);state.scene?.playReaction(emoji);},
 });
+const giftUI=createGiftUI({
+  getRoom:()=>state.room,
+  getMyId:()=>state.myId,
+  emitAck,
+  toast,
+  scene:()=>state.scene,
+});
+const battleUI=createBattleUI({
+  getRoom:()=>state.room,
+  getMyId:()=>state.myId,
+  isHost:roomHost,
+  emitAck,toast,scene:()=>state.scene,
+});
 function setControlsEnabled(enabled){
   for(const id of ['copy-invite','leave-room','copy-room-bottom','song-url','add-song','chat-input','send-chat','mic-button','ptt-button'])$(id).disabled=!enabled;
   for(const btn of document.querySelectorAll('[data-reaction], [data-emote]'))btn.disabled=!enabled;
@@ -146,8 +161,8 @@ function resetAndLeave(showToast=true){
   state.isMicOn=false;state.transmitting=false;
   $('autotune-pitch').textContent = 'Chưa nhận diện cao độ';
   state.myId=null;state.room=null;state.lastSingerId=null;state.currentVideoId=null;state.pendingSignals=[];
-  partyUI.reset();
-  state.scene?.setLocalUser(null);state.scene?.setMembers([]);state.scene?.setPerformance(null);state.scene?.setView('front');
+  partyUI.reset();giftUI.reset();battleUI.reset();
+  state.scene?.setLocalUser(null);state.scene?.setMembers([]);state.scene?.setPerformance(null);state.scene?.setBattleState(null);state.scene?.setView('front');
   if(state.youtubeReady) {try{state.youtube.stopVideo()}catch{}}
   state.scene?.tvPlaceholder?.style.setProperty('display','flex');
   $('welcome-screen').classList.remove('hidden');
@@ -249,7 +264,8 @@ function renderPerformance(){
   }
 }
 function renderRoom(){
-  renderMembers();renderQueue();renderChat();renderPerformance();partyUI.render();
+  renderMembers();renderQueue();renderChat();renderPerformance();partyUI.render();giftUI.render();battleUI.render();
+  state.scene?.setBattleState(state.room?.battle);
   $('status-label').textContent=state.room?`Phòng ${state.room.code} • ${state.room.users.length} người`:'Chưa tham gia phòng';
   $('scene-status').textContent=state.room?'Đang trực tuyến':'Đang chờ';
   const active=state.room?.player?.videoId;
@@ -756,6 +772,16 @@ socket.on('party:state', (partyGames)=>{
   state.room.partyGames=partyGames;
   partyUI.render();
 });
+socket.on('battle:state',battle=>{
+  if(!state.room||!battle)return;
+  state.room.battle=battle;
+  battleUI.render();
+  state.scene?.setBattleState(battle);
+});
+socket.on('battle:champion',payload=>{if(state.room)battleUI.showChampion(payload);});
+socket.on('gift:show',gift=>{if(state.room)giftUI.showGift(gift);});
+socket.on('gifts:state',gifts=>{if(state.room){state.room.gifts=gifts;giftUI.render();}});
+socket.on('celebration:show',celebration=>{if(state.room)giftUI.showCelebration(celebration);});
 socket.on('world:state',({world}={})=>{
   if(!state.room || !world)return;
   state.room.world=world;
@@ -911,7 +937,7 @@ setInterval(()=>{
       },
     });
     if(state.myId)state.scene.setLocalUser(state.myId);
-    if(state.room){state.scene.setMembers(state.room.users);state.scene.setWorldState(state.room.world);state.scene.setPerformance(state.room.performance?.singerId);}
+    if(state.room){state.scene.setMembers(state.room.users);state.scene.setWorldState(state.room.world);state.scene.setPerformance(state.room.performance?.singerId);state.scene.setBattleState(state.room.battle);}
     if(state.room)ensureYoutube();
   }catch(err){
     console.error('3D scene unavailable',err);

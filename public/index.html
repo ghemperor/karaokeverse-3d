@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0920"/>
   <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
-  <title>KaraokeVerse 3D v1.2.4 • Party Games</title>
+  <title>KaraokeVerse 3D v1.3 • Battle Arena</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -52,6 +52,10 @@
           </div>
           <button id="scene-fullscreen" class="scene-fullscreen" type="button" aria-label="Bật hoặc tắt toàn màn hình" title="Toàn màn hình (phím F)">⛶ <span>Toàn màn hình</span></button>
           <button id="unlock-video" class="video-unlock" title="Cho phép trình duyệt phát video YouTube">▶ Bật video</button>
+          <div id="gift-stage-toast" class="gift-stage-toast" aria-live="polite"></div>
+          <div id="battle-scene-score" class="battle-scene-score" hidden>⚔️ BATTLE ARENA</div>
+          <div id="battle-champion-overlay" class="battle-champion-overlay" aria-live="assertive"><span class="battle-champion-cup">🏆</span><small>KARAOKEVERSE • BATTLE ARENA</small><strong id="battle-champion-title">ĐỘI CHIẾN THẮNG</strong><span id="battle-champion-names">Những ngôi sao sân khấu</span><b id="battle-champion-score">0 : 0</b></div>
+          <div id="victory-overlay" class="victory-overlay" aria-live="assertive"><div class="victory-glow">🏆</div><small>♪ KARAOKEVERSE CHAMPION ♪</small><strong id="victory-names">Giọng ca chiến thắng</strong><span id="victory-subtitle">Chúc mừng!</span></div>
           <div class="stage-bottom-overlay"><div class="song-now-icon">♫</div><div><div class="mini-heading">NOW PLAYING</div><b id="now-title">Sân khấu đang chờ bạn...</b><small id="now-subtitle">Thêm bài hát YouTube để bắt đầu</small></div></div>
         </div>
         <div class="player-bar"><div class="player-left"><span class="sound-wave">▂▅▃▇▅</span><div><strong id="player-title">Chưa phát bài hát</strong><small id="player-caption">Chủ phòng có thể điều khiển bài hát</small></div></div><div class="player-controls"><button id="control-play" class="play-main" title="Phát/Tạm dừng" disabled>▶</button><button id="control-next" class="transport-btn" title="Bài tiếp theo" disabled>⏭</button></div><div class="player-right"><span id="time-current">00:00</span><input id="video-seek" type="range" min="0" max="100" step="1" value="0" disabled aria-label="Tua video"/><span id="time-total">--:--</span></div></div>
@@ -69,6 +73,27 @@
             <button class="party-btn" id="party-mode" disabled>🪩 Party mode</button>
           </div>
         </div>
+        <details class="battle-panel" id="battle-panel" open>
+          <summary><span>⚔️ BATTLE ARENA • SOLO & TEAM</span><small id="battle-badge">CHỜ CHỦ PHÒNG</small><span class="autotune-chevron">⌄</span></summary>
+          <div class="battle-body">
+            <div class="battle-headrow"><div><strong>THE BATTLE STAGE</strong><small>Thi hát • Bình chọn multiplayer • Trao giải</small></div><span id="battle-status" class="battle-status">CHƯA BẮT ĐẦU</span></div>
+            <div class="battle-config" id="battle-setup">
+              <label>Hình thức thi đấu<select id="battle-mode"><option value="solo">🎤 Solo Battle 1vs1</option><option value="team">👥 Team Battle</option></select></label>
+              <label>Số vòng đấu<select id="battle-rounds"><option value="1">1 vòng</option><option value="2">2 vòng</option><option value="3" selected>3 vòng</option><option value="4">4 vòng</option><option value="5">5 vòng</option></select></label>
+              <div class="battle-roster-heading" id="battle-roster-title">Chọn 2 người thi Solo</div>
+              <div class="battle-roster-grid"><section class="battle-roster-side a"><h4>🔴 ĐỘI A</h4><div id="battle-roster-A" class="battle-roster-options"></div></section><section class="battle-roster-side b"><h4>🔵 ĐỘI B</h4><div id="battle-roster-B" class="battle-roster-options"></div></section></div>
+              <div class="battle-config-buttons"><button type="button" id="battle-start" class="battle-primary" disabled>⚔️ Bắt đầu trận đấu</button><button type="button" id="battle-cancel" class="battle-secondary" disabled>✕ Hủy trận</button></div>
+            </div>
+            <div class="battle-scoreboard" aria-label="Bảng điểm trận đấu">
+              <div class="battle-side a" id="battle-side-A"><div class="battle-side-head">🔴 RED SIDE</div><strong id="battle-score-A">0</strong><span id="battle-names-A">Chưa chọn A</span><small id="battle-singer-A">🎤 Chưa có ca sĩ</small><em id="battle-live-A">0 phiếu</em></div>
+              <div class="battle-center"><span>⚡ VS ⚡</span><b id="battle-round">BATTLE ARENA</b><button type="button" id="battle-advance" class="battle-primary" disabled>Chuyển giai đoạn</button></div>
+              <div class="battle-side b" id="battle-side-B"><div class="battle-side-head">🔵 BLUE SIDE</div><strong id="battle-score-B">0</strong><span id="battle-names-B">Chưa chọn B</span><small id="battle-singer-B">🎤 Chưa có ca sĩ</small><em id="battle-live-B">0 phiếu</em></div>
+            </div>
+            <div class="battle-voting"><span class="battle-section-label">🗳 BÌNH CHỌN TRỰC TIẾP</span><div class="battle-vote-buttons"><button id="battle-vote-A" type="button" disabled>❤️ Bình chọn Đội A</button><button id="battle-vote-B" type="button" disabled>💙 Bình chọn Đội B</button></div><p id="battle-vote-info" aria-live="polite">Hoàn tất lượt hát của A và B để mở bình chọn.</p></div>
+            <div class="battle-history"><span class="battle-section-label">🏅 LỊCH SỬ CÁC VÒNG</span><div id="battle-history" class="battle-history-list"></div></div>
+            <p class="battle-footnote">Chủ phòng điều khiển từng lượt. Người vừa biểu diễn không được bình chọn trong vòng đó; đồng đội và khán giả có thể bình chọn. Khi không có phiếu, vòng đấu không cộng điểm. Truyền lượt hát không tự bật micro vật lý. Điểm Battle chỉ dựa trên phiếu, không chấm cao độ YouTube.</p>
+          </div>
+        </details>
         <details class="party-games-panel" id="party-games-panel" open>
           <summary><span>🎲 PARTY GAMES • VÒNG QUAY & BÌNH CHỌN</span><small id="party-game-badge">CHỜ CHỦ PHÒNG</small><span class="autotune-chevron">⌄</span></summary>
           <div class="pg-body">
@@ -107,6 +132,19 @@
               <div id="party-vote-results" class="pg-vote-results"><p class="pg-help">Chủ phòng mở bình chọn để mọi người chọn giọng hát yêu thích.</p></div>
               <div id="party-vote-winners" class="pg-vote-winners" aria-live="polite"></div>
             </section>
+          </div>
+        </details>
+        <details class="gift-panel" id="gift-panel" open>
+          <summary><span>💝 VIRTUAL GIFTS • QUÀ TẶNG 3D</span><small id="gift-badge">CẦN 2 NGƯỜI</small><span class="autotune-chevron">⌄</span></summary>
+          <div class="gift-body">
+            <div class="gift-heading"><div><h3>Gửi yêu thương lên sân khấu</h3><p>Chọn một món quà miễn phí. Cả phòng sẽ thấy hiệu ứng 3D quanh người nhận.</p></div><span id="gift-counter">0 lượt quà gần đây</span></div>
+            <div class="gift-options" id="gift-options" role="group" aria-label="Chọn món quà"></div>
+            <div class="gift-controls">
+              <label>Người nhận <select id="gift-recipient" aria-label="Chọn người nhận quà" disabled><option value="">Chọn người nhận</option></select></label>
+              <button type="button" id="gift-send" class="gift-send" disabled>🎁 Gửi quà lên sân khấu</button>
+            </div>
+            <div class="gift-bottom"><section><h4>✨ Quà tặng gần đây</h4><div id="gift-feed" class="gift-feed" aria-live="polite"></div></section><section><h4>🏅 Bảng cổ vũ</h4><div id="gift-leaderboard" class="gift-leaderboard"></div></section></div>
+            <p class="gift-help">Quà chỉ mang tính giải trí, không sử dụng tiền thật hoặc Coin. Giới hạn 1 lượt gửi / 1,6 giây để tránh spam.</p>
           </div>
         </details>
         <div class="bottom-controls"><div class="ctrl-section"><button id="mic-button" class="control-btn" disabled><span class="control-icon">🎙</span><span id="mic-label">Bật micro</span></button><button id="ptt-button" class="control-btn" disabled title="Giữ phím Space để nói khi chế độ này được bật"><span class="control-icon">◉</span><span id="ptt-label">Open mic</span></button><button id="sound-button" class="control-btn"><span class="control-icon">🔈</span><span>Âm lượng</span></button><input id="voice-volume" aria-label="Âm lượng người khác" type="range" min="0" max="100" value="85"/></div><div class="ctrl-section"><button id="copy-room-bottom" class="control-btn accent-control" disabled>✉ Mời bạn bè</button></div></div>
@@ -201,7 +239,7 @@
         <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
       </aside>
     </main>
-    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.4 • PARTY GAMES</span></footer>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.3 • BATTLE ARENA</span></footer>
   </div>
   <div id="welcome-screen" class="modal-layer">
     <div class="welcome-glow"></div>

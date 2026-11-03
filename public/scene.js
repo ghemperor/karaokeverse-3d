@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { getSofaSeat, isWalkingPositionBlocked, standFromSofa, SINGING_ARM } from './avatar-interactions.js';
+import { GIFT_BY_ID } from './gift-data.js';
 
 const COLORS = [0xc67afe, 0x70d4ff, 0xff78c8, 0xffd178, 0x83eabb, 0xff8484, 0xa4abff, 0xe9c3ff];
 const VIEWS = {
@@ -137,6 +138,64 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     const bulb=new THREE.PointLight(sx>0?0x63b6ff:0xd054ff,40,6,2);bulb.position.set(sx,4.72,-1.4);scene.add(bulb);
     const fixture=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.23,16),gloss);fixture.position.copy(bulb.position);scene.add(fixture);
     movingLights.push(bulb);
+  }
+  // v1.3 Battle Arena: two illuminated sides, spotlights and a 3D score ribbon.
+  // All stage geometry is local to this scene and follows the server's battle phase.
+  const battleRig=new THREE.Group();scene.add(battleRig);battleRig.visible=false;
+  const battleRings=[],battleSpotlights=[];
+  for(const [i,side] of ['A','B'].entries()){
+    const x=side==='A'?-1.8:1.8;
+    const color=side==='A'?0xff537f:0x54b6ff;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(.65,.82,36),
+      new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide,transparent:true,opacity:.8,depthWrite:false,toneMapped:false}));
+    ring.rotation.x=-Math.PI/2;ring.position.set(x,.17,-2.22);battleRig.add(ring);battleRings.push(ring);
+    const disk=new THREE.Mesh(new THREE.CircleGeometry(.58,36),
+      new THREE.MeshBasicMaterial({color,transparent:true,opacity:.10,side:THREE.DoubleSide,depthWrite:false}));
+    disk.rotation.x=-Math.PI/2;disk.position.set(x,.165,-2.22);battleRig.add(disk);
+    const lamp=new THREE.SpotLight(color,0,12,Math.PI/5,.65,1.5);
+    lamp.position.set(x*1.2,4.85,.2);lamp.target.position.set(x,.2,-2.22);
+    scene.add(lamp,lamp.target);battleSpotlights.push(lamp);
+  }
+  const battleBannerCanvas=document.createElement('canvas');battleBannerCanvas.width=1024;battleBannerCanvas.height=128;
+  const battleBannerTexture=new THREE.CanvasTexture(battleBannerCanvas);
+  battleBannerTexture.colorSpace=THREE.SRGBColorSpace;
+  const battleBanner=new THREE.Mesh(new THREE.PlaneGeometry(4.5,.53),
+    new THREE.MeshBasicMaterial({map:battleBannerTexture,transparent:true,depthWrite:false,toneMapped:false}));
+  battleBanner.position.set(0,5.02,-5.10);battleRig.add(battleBanner);
+  let battleSceneState=null,battleSceneSignature='',battleVictoryUntil=0;
+  function redrawBattleBanner(battle){
+    const signature=JSON.stringify([battle?.id,battle?.status,battle?.roundIndex,battle?.stage,battle?.score,battle?.counts]);
+    if(signature===battleSceneSignature)return;
+    battleSceneSignature=signature;
+    const ctx=battleBannerCanvas.getContext('2d');
+    ctx.clearRect(0,0,1024,128);ctx.fillStyle='#130b2df2';ctx.fillRect(0,8,1024,110);
+    ctx.fillStyle='#ff779f';ctx.fillRect(0,8,12,110);ctx.fillStyle='#6dbdff';ctx.fillRect(1012,8,12,110);
+    ctx.textAlign='center';ctx.font='bold 41px system-ui';ctx.fillStyle='#fff';
+    const score=battle?.score||{A:0,B:0};
+    const mark=n=>Number.isInteger(n)?String(n):n.toFixed(1);
+    ctx.fillText(`⚔ BATTLE  •  RED ${mark(score.A)}  :  ${mark(score.B)} BLUE`,512,59);
+    ctx.font='bold 23px system-ui';ctx.fillStyle='#c9bafa';
+    ctx.fillText(`ROUND ${(battle?.roundIndex||0)+1}/${battle?.rounds||1}   •   ${battle?.status==='voting'?'LIVE VOTING':battle?.status==='performing'?'ON STAGE '+battle.stage:'BATTLE ARENA'}`,512,95);
+    battleBannerTexture.needsUpdate=true;
+  }
+  function setBattleState(battle){
+    battleSceneState=battle || null;
+    const show=Boolean(battle?.id && ['performing','voting','result','finished'].includes(battle.status));
+    battleRig.visible=show;
+    if(show)redrawBattleBanner(battle);
+    for(let i=0;i<2;i++){
+      const selected=battle?.status==='performing'&&battle.stage===(i===0?'A':'B');
+      battleSpotlights[i].intensity=show?(selected?140:battle.status==='voting'?90:34):0;
+      battleRings[i].material.opacity=show?(selected?1:.55):0;
+    }
+  }
+  function playBattleVictory(winnerIds=[],winnerSide=null){
+    if(disposed)return;
+    battleVictoryUntil=performance.now()+7000;
+    playVictory(winnerIds);
+    // Emphasize winning side for the duration of the ceremony; leave normal
+    // stage lighting untouched after the animation ends.
+    if(!winnerSide)playGift('confetti',null);
   }
   // Low sofas: sides and near camera, plush cushions
   const sofaSpecs=[[-5.8,1.0,-.1,2.0,1.35,4.8], [5.8,1.0,-.1,2.0,1.35,4.8], [-3.8,.9,3.35,3.7,1.25,1.5], [3.8,.9,3.35,3.7,1.25,1.5]];
@@ -512,6 +571,58 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     particles.push(particle);
   }
   const particles=[];
+  // Animated world-space gift sprites, 3D rings and a stage celebration.
+  // A shared texture per emoji avoids repeated CanvasTexture uploads and keeps mobile GPU cost bounded.
+  const giftTextures=new Map();
+  const giftEffects=[];
+  const GIFT_TINTS={rose:0xff6798,heart:0xfa78c7,stars:0xffd677,confetti:0x8dc9ff,crown:0xffd26e,disco:0x9f8aff};
+  let victoryUntil=0;
+  function giftTexture(icon){
+    if(giftTextures.has(icon))return giftTextures.get(icon);
+    const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
+    const ctx=canvas.getContext('2d');ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='96px "Segoe UI Emoji","Apple Color Emoji",sans-serif';ctx.fillText(icon,64,69);
+    const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+    giftTextures.set(icon,tex);return tex;
+  }
+  function dropGiftEffect(fx){
+    scene.remove(fx.object);
+    // SpriteGeometry is shared by Three; only dispose per-instance materials.
+    if(!fx.object.isSprite)fx.object.geometry.dispose();
+    fx.object.material.dispose();
+  }
+  function playGift(giftId,toId){
+    const gift=GIFT_BY_ID.get(giftId);if(!gift || disposed)return;
+    const avatar=userGroups.get(toId);const x=avatar?.position.x??0;const z=avatar?.position.z??-2.2;
+    const now=performance.now();
+    const icons=giftId==='confetti'?['🎉','✨','🌟']:giftId==='rose'?['🌹','🌸','✨']:giftId==='disco'?['🪩','💜','✨']:[gift.icon,'✨'];
+    const count=window.innerWidth<700?11:20;
+    for(let i=0;i<count;i++){
+      const material=new THREE.SpriteMaterial({map:giftTexture(icons[i%icons.length]),transparent:true,opacity:1,depthTest:false,depthWrite:false});
+      const sprite=new THREE.Sprite(material);
+      const angle=(i/count)*Math.PI*2+Math.random()*.28;
+      const distance=.22+Math.random()*1.0;
+      const baseY=.7+Math.random()*1.3;
+      sprite.position.set(x+Math.cos(angle)*distance,baseY,z+Math.sin(angle)*distance);
+      const size=.3+Math.random()*.28;sprite.scale.set(size,size,1);
+      scene.add(sprite);
+      giftEffects.push({object:sprite,kind:'float',born:now+i*18,life:2600+Math.random()*1700,
+        x:sprite.position.x,y:baseY,z:sprite.position.z,vx:Math.cos(angle)*(.05+Math.random()*.2),vz:Math.sin(angle)*(.05+Math.random()*.2),vy:.25+Math.random()*.34,size});
+    }
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.42,.035,6,48),new THREE.MeshBasicMaterial({color:GIFT_TINTS[giftId]||0xffd777,transparent:true,opacity:.95,depthWrite:false,side:THREE.DoubleSide}));
+    ring.rotation.x=Math.PI/2;ring.position.set(x,.18,z);scene.add(ring);
+    giftEffects.push({object:ring,kind:'ring',born:now,life:1900});
+    while(giftEffects.length>145)dropGiftEffect(giftEffects.shift());
+  }
+  function playVictory(winnerIds=[]){
+    if(disposed)return;
+    victoryUntil=performance.now()+6500;
+    for(const id of winnerIds.slice(0,3)){
+      playGift('crown',id);
+      playGift('stars',id);
+    }
+    if(!winnerIds.length)playGift('confetti',null);
+  }
   function interactLooking(){
     const rect=renderer.domElement.getBoundingClientRect();
     activate(hitAt(rect.left+rect.width/2,rect.top+rect.height/2,true));
@@ -609,8 +720,11 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     const dt=Math.min(movementClock.getDelta(),.05);
     const t=movementClock.elapsedTime;
     if(isDiscoOn){disc.rotation.y=t*.45;disc.rotation.z=t*.17;discRing.rotation.z=t*.11;}
-    const showTime=Boolean(performerId)||worldState.party;
-    rimLight.intensity=showTime?190:65;
+    const victoryActive=performance.now()<victoryUntil;
+    const showTime=Boolean(performerId)||worldState.party||victoryActive;
+    rimLight.intensity=victoryActive?270:showTime?190:65;
+    if(victoryActive)rimLight.color.setHSL((t*.12)%1,.8,.66);
+    else rimLight.color.setHex(0xff59bd);
     beams.forEach((beam,i)=>{
       beam.visible=showTime&&speakerEffects;
       beam.rotation.z=Math.sin(t*(worldState.party?1.9:0.8)+i*1.2)*.15;
@@ -622,7 +736,33 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       part.material.opacity=Math.max(0,1-age/2.2);
       if(age>2.2){scene.remove(part);part.geometry.dispose();part.material.dispose();particles.splice(i,1);}
     }
-    movingLights.forEach((light,i)=>{light.intensity=speakerEffects?((worldState.party?65:showTime?45:25)+12*Math.sin(t*(worldState.party?4:1.7)+i*.9)):0;});
+    // Gift animations must not run indefinitely or retain GPU resources after the effect ends.
+    const giftNow=performance.now();
+    for(let i=giftEffects.length-1;i>=0;i--){
+      const fx=giftEffects[i],age=giftNow-fx.born,progress=Math.max(0,Math.min(1,age/fx.life));
+      if(age>fx.life){dropGiftEffect(fx);giftEffects.splice(i,1);continue;}
+      if(fx.kind==='float'){
+        fx.object.position.set(fx.x+fx.vx*(age/1000),fx.y+fx.vy*(age/1000),fx.z+fx.vz*(age/1000));
+        const k=1+.36*progress;fx.object.scale.set(fx.size*k,fx.size*k,1);
+        fx.object.material.opacity=progress<.15?progress/.15:Math.min(1,(1-progress)/.27);
+      } else {
+        fx.object.scale.setScalar(1+progress*3.3);
+        fx.object.material.opacity=Math.max(0,1-progress);
+      }
+    }
+    const battleVictory=performance.now()<battleVictoryUntil;
+    if(battleSceneState?.id){
+      battleSpotlights.forEach((lamp,i)=>{
+        const side=i===0?'A':'B';
+        const singerSide=battleSceneState.status==='performing'&&battleSceneState.stage===side;
+        const ceremonySide=battleSceneState.status==='finished'&&battleSceneState.winnerSide===side;
+        lamp.intensity=battleVictory?(ceremonySide?210:90):
+          battleSceneState.status==='performing'?(singerSide?145:20):
+          battleSceneState.status==='voting'?(85+15*Math.sin(t*3+i)):40;
+      });
+      battleRings.forEach((ring,i)=>{ring.rotation.z=t*.20*(i===0?1:-1);});
+    }
+    movingLights.forEach((light,i)=>{light.intensity=speakerEffects?((victoryActive?100:worldState.party?65:showTime?45:25)+12*Math.sin(t*(victoryActive?6:worldState.party?4:1.7)+i*.9)):0;});
     // Use a separate target to avoid accumulating spring error.
     const targetDoorAngle=doorOpened?-.88:0;
     doorAngle+=(targetDoorAngle-doorAngle)*Math.min(1,dt*6);
@@ -692,9 +832,11 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     window.removeEventListener('keydown',onKeyDown);window.removeEventListener('keyup',onKeyUp);window.removeEventListener('blur',onBlur);
     actionButton?.removeEventListener('click',clickAction);
     for(const [button,down,up] of padBindings){button.removeEventListener('pointerdown',down);button.removeEventListener('pointerup',up);button.removeEventListener('pointercancel',up);}
+    for(const fx of giftEffects)dropGiftEffect(fx);giftEffects.length=0;
+    for(const tex of giftTextures.values())tex.dispose();giftTextures.clear();
     controls.dispose();renderer.dispose();
     scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){obj.material.map?.dispose?.();obj.material.dispose?.()}});
     webglContainer.replaceChildren();cssContainer.replaceChildren();
   }
-  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,setView,setEmote,setPerformance,setWorldState,goStage,playReaction,interactLooking,getView:()=>selectedView,dispose};
+  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,setView,setEmote,setPerformance,setWorldState,setBattleState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,dispose};
 }

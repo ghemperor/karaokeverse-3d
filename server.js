@@ -9,6 +9,8 @@ import { cleanPosition } from './lib/position.js';
 import { createWorld, updateWorld, cleanEmote } from './lib/world.js';
 import { createPerformance, requestPerformance, leavePerformance, nextPerformance } from './lib/performance.js';
 import { createPartyGames, startSpin, passStage, openPoll, castVote, closePoll, publicParty, memberLeavesParty, CHALLENGES } from './lib/party-games.js';
+import { createGifts, sendGift, publicGifts, memberLeavesGifts } from './lib/gifts.js';
+import { createBattle, configureBattle, advanceBattle, castBattleVote, finishBattleVote, cancelBattle, memberLeavesBattle, publicBattle, currentBattleSinger, isBattleActive } from './lib/battle.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -56,11 +58,62 @@ function serialize(room) {
     users: [...room.users.values()],
     queue: room.queue, player: room.player,
     chat: room.chat.slice(-25),
-    world: room.world, performance: room.performance, partyGames: publicParty(room.partyGames),
+    world: room.world, performance: room.performance, partyGames: publicParty(room.partyGames), gifts: publicGifts(room.gifts), battle: publicBattle(room.battle),
     createdAt: room.createdAt,
   };
 }
 function broadcastRoom(room) { io.to(room.code).emit('room:state', serialize(room)); }
+// Keep the existing singer queue intact while Battle temporarily owns the stage.
+function syncBattlePerformance(room) {
+  if (isBattleActive(room.battle)) {
+    room.performance = { singerId: currentBattleSinger(room.battle), queue: [] };
+  } else if (room.beforeBattlePerformance) {
+    const saved=room.beforeBattlePerformance;
+    const allowed=id=>room.users.has(id);
+    room.performance = {
+      singerId: allowed(saved.singerId) ? saved.singerId : null,
+      queue: saved.queue.filter(allowed),
+    };
+    room.beforeBattlePerformance=null;
+  }
+}
+function announceBattleChampion(room) {
+  const battle=publicBattle(room.battle);
+  if (battle.status!=='finished') return;
+  io.to(room.code).emit('battle:champion', {
+    battleId:battle.id, winnerSide:battle.winnerSide,
+    winnerIds:battle.winnerSide ? battle.teams[battle.winnerSide].filter(id=>room.users.has(id)) : [],
+    winnerNames:battle.winnerSide ? battle.teams[battle.winnerSide].map(id=>room.users.get(id)?.name).filter(Boolean) : [],
+    score:battle.score, mode:battle.mode,
+  });
+}
+function announceBattle(room) {
+  syncBattlePerformance(room);
+  io.to(room.code).emit('battle:state',publicBattle(room.battle));
+  broadcastRoom(room);
+}
+function scheduleBattleVote(room) {
+  const battle=room.battle;
+  if (battle.status!=='voting') return;
+  const {id,roundIndex,votingEndsAt}=battle;
+  const delay=Math.max(0,votingEndsAt-Date.now())+30;
+  setTimeout(()=>{
+    if(rooms.get(room.code)!==room || room.battle.id!==id ||
+      room.battle.status!=='voting' || room.battle.roundIndex!==roundIndex) return;
+    const closed=finishBattleVote(room.battle,Date.now());
+    if(closed.ok){room.battle=closed.battle;announceBattle(room);}
+  },delay).unref?.();
+}
+function announcePollWinners(room) {
+  const poll=publicParty(room.partyGames).poll;
+  if (!poll?.winners?.length) return;
+  io.to(room.code).emit('celebration:show', {
+    id: poll.id, at: Date.now(), winnerIds: poll.winners,
+    totalVotes: poll.totalVotes,
+    names: poll.winners.map(id=>room.users.get(id)?.name || 'Người chơi'),
+  });
+}
+
 function leave(socket) {
   const code = socket.data.room;
   if (!code) return;
@@ -71,6 +124,9 @@ function leave(socket) {
   room.users.delete(socket.id);
   room.performance = leavePerformance(room.performance, socket.id);
   room.partyGames = memberLeavesParty(room.partyGames, socket.id);
+  room.gifts = memberLeavesGifts(room.gifts, socket.id);
+  room.battle = memberLeavesBattle(room.battle, socket.id);
+  syncBattlePerformance(room);
   socket.to(code).emit('user:left', { id: socket.id });
   if (!room.users.size) { rooms.delete(code); return; }
   if (room.hostId === socket.id) room.hostId = room.users.keys().next().value;
@@ -105,7 +161,8 @@ io.on('connection', (socket) => {
       const code = codeNew();
       const room = {
         code, hostId: socket.id, users: new Map(), queue: [], chat: [],
-        world: createWorld(), performance: createPerformance(), partyGames: createPartyGames(),
+        world: createWorld(), performance: createPerformance(), partyGames: createPartyGames(), gifts: createGifts(),
+        battle: createBattle(), beforeBattlePerformance: null,
         player: { videoId: null, playing: false, position: 0, updatedAt: Date.now() },
         createdAt: Date.now(),
       };
@@ -164,6 +221,7 @@ io.on('connection', (socket) => {
   socket.on('performance:request', (_, ack) => {
     const room = getRoom(socket);
     if (!room) return ack?.({ ok: false, error: 'Bạn chưa vào phòng.' });
+    if(isBattleActive(room.battle))return ack?.({ok:false,error:'Battle Arena đang quản lý sân khấu.'});
     const result = requestPerformance(room.performance,socket.id,MAX_PEOPLE);
     if(!result.ok)return ack?.({ok:false,error:result.error});
     room.performance=result.performance;
@@ -173,6 +231,7 @@ io.on('connection', (socket) => {
   socket.on('performance:leave', (_, ack) => {
     const room = getRoom(socket);
     if (!room) return ack?.({ ok: false });
+    if(isBattleActive(room.battle))return ack?.({ok:false,error:'Không thể thay lượt hát trong Battle.'});
     room.performance=leavePerformance(room.performance,socket.id);
     broadcastRoom(room);
     ack?.({ ok: true });
@@ -181,6 +240,7 @@ io.on('connection', (socket) => {
     const room = getRoom(socket);
     if (!room || room.hostId !== socket.id)
       return ack?.({ ok: false, error: 'Chỉ chủ phòng được chuyển lượt.' });
+    if(isBattleActive(room.battle))return ack?.({ok:false,error:'Hãy điều khiển lượt bằng Battle Arena.'});
     room.performance=nextPerformance(room.performance);
     broadcastRoom(room);
     ack?.({ ok: true });
@@ -203,6 +263,7 @@ io.on('connection', (socket) => {
     if (!room) return ack?.({ ok: false, error: 'Bạn chưa tham gia phòng.' });
     const now = Date.now();
     if (now - (socket.data.lastPassAt || 0) < 1000) return ack?.({ ok: false, error: 'Truyền micro quá nhanh.' });
+    if(isBattleActive(room.battle))return ack?.({ok:false,error:'Không thể truyền lượt hát khi đang Battle.'});
     const result = passStage(room.performance, socket.id, payload?.toId, room.hostId === socket.id, [...room.users.keys()]);
     if (!result.ok) return ack?.({ ok: false, error: result.error });
     room.performance = result.performance;
@@ -214,6 +275,7 @@ io.on('connection', (socket) => {
   socket.on('party:poll:start', (_, ack) => {
     const room = getRoom(socket);
     if (!room || room.hostId !== socket.id) return ack?.({ ok: false, error: 'Chỉ chủ phòng được mở bình chọn.' });
+    if(isBattleActive(room.battle))return ack?.({ok:false,error:'Battle đang sử dụng hệ thống bình chọn riêng.'});
     const result = openPoll(room.partyGames, [...room.users.keys()]);
     if (!result.ok) return ack?.({ ok: false, error: result.error });
     room.partyGames = result.party;
@@ -222,7 +284,7 @@ io.on('connection', (socket) => {
     setTimeout(() => {
       if (rooms.get(room.code) !== room || room.partyGames.poll.id !== id || room.partyGames.poll.status !== 'open') return;
       const closed = closePoll(room.partyGames);
-      if (closed.ok) { room.partyGames = closed.party; io.to(room.code).emit('party:state', publicParty(room.partyGames)); }
+      if (closed.ok) { room.partyGames = closed.party; io.to(room.code).emit('party:state', publicParty(room.partyGames)); announcePollWinners(room); }
     }, Math.max(0, result.party.poll.endsAt - Date.now()) + 25).unref?.();
     ack?.({ ok: true });
   });
@@ -242,7 +304,69 @@ io.on('connection', (socket) => {
     if (!result.ok) return ack?.({ ok: false, error: result.error });
     room.partyGames = result.party;
     io.to(room.code).emit('party:state', publicParty(room.partyGames));
+    announcePollWinners(room);
     ack?.({ ok: true });
+  });
+  // v1.3 Battle Arena. The server owns team rosters, turns, voting and scores.
+  socket.on('battle:start', (payload, ack) => {
+    const room=getRoom(socket);
+    if(!room || room.hostId!==socket.id)
+      return ack?.({ok:false,error:'Chỉ chủ phòng được bắt đầu Battle.'});
+    if(room.partyGames.poll.status==='open')
+      return ack?.({ok:false,error:'Kết thúc bình chọn Party Games trước khi bắt đầu Battle.'});
+    const result=configureBattle(room.battle,payload,[...room.users.keys()]);
+    if(!result.ok) return ack?.({ok:false,error:result.error});
+    if(!isBattleActive(room.battle))room.beforeBattlePerformance={...room.performance,queue:[...room.performance.queue]};
+    room.battle=result.battle;
+    announceBattle(room);
+    ack?.({ok:true});
+  });
+  socket.on('battle:advance', (_, ack) => {
+    const room=getRoom(socket);
+    if(!room || room.hostId!==socket.id)
+      return ack?.({ok:false,error:'Chỉ chủ phòng được chuyển vòng Battle.'});
+    const now=Date.now();
+    if(now-(socket.data.lastBattleAdvanceAt||0)<700)
+      return ack?.({ok:false,error:'Hãy đợi trước khi chuyển lượt tiếp.'});
+    const result=advanceBattle(room.battle,now);
+    if(!result.ok)return ack?.({ok:false,error:result.error});
+    socket.data.lastBattleAdvanceAt=now;
+    room.battle=result.battle;
+    announceBattle(room);
+    scheduleBattleVote(room);
+    if(room.battle.status==='finished')announceBattleChampion(room);
+    ack?.({ok:true});
+  });
+  socket.on('battle:vote', (payload, ack) => {
+    const room=getRoom(socket);
+    if(!room)return ack?.({ok:false,error:'Bạn chưa tham gia phòng.'});
+    const result=castBattleVote(room.battle,socket.id,payload?.side,[...room.users.keys()]);
+    if(!result.ok)return ack?.({ok:false,error:result.error});
+    room.battle=result.battle;
+    io.to(room.code).emit('battle:state',publicBattle(room.battle));
+    ack?.({ok:true});
+  });
+  socket.on('battle:cancel', (_, ack) => {
+    const room=getRoom(socket);
+    if(!room || room.hostId!==socket.id)
+      return ack?.({ok:false,error:'Chỉ chủ phòng được hủy trận.'});
+    const result=cancelBattle(room.battle);
+    if(!result.ok)return ack?.({ok:false,error:result.error});
+    room.battle=result.battle;
+    announceBattle(room);
+    ack?.({ok:true});
+  });
+  socket.on('gift:send', (payload, ack) => {
+    const room = getRoom(socket);
+    if (!room) return ack?.({ok:false,error:'Bạn chưa tham gia phòng.'});
+    const sender=room.users.get(socket.id);
+    const recipient=room.users.get(payload?.toId);
+    const result=sendGift(room.gifts,sender,recipient,payload?.giftId,room.users);
+    if (!result.ok) return ack?.({ok:false,error:result.error});
+    room.gifts=result.state;
+    io.to(room.code).emit('gift:show',result.gift);
+    io.to(room.code).emit('gifts:state',publicGifts(room.gifts));
+    ack?.({ok:true});
   });
   socket.on('reaction:send', (payload) => {
     const room = getRoom(socket); if (!room) return;
