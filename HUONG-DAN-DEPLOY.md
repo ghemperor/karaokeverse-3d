@@ -1,3 +1,19 @@
+# Cập nhật KaraokeVerse 3D v1.2.4 lên Render từ GitHub
+
+**Dành cho repository đã chạy KaraokeVerse v1.2.3 và có TURN Metered cấu hình trong Render.**
+
+1. Sao lưu nhánh `main` (hoặc tải ZIP repository) trước khi cập nhật.
+2. Giải nén `KaraokeVerse-v1.2.4-GitHub-Update.zip` và upload các **file bên trong** lên cùng vị trí tương ứng tại repository GitHub của bạn (ghi đè phiên bản cũ).
+3. Kiểm tra trong GitHub: `server.js` và `package.json` ở gốc; `lib/party-games.js` ở `lib/`; `party-ui.js`, `party-wheel.js`, `party-data.js`, `app.js`, `style.css`, `index.html` ở `public/`.
+4. Commit lên nhánh Render đang theo dõi. Nếu Auto Deploy bật, Render sẽ tự triển khai; nếu không, vào Render → Manual Deploy → Deploy latest commit.
+5. **Không xóa hoặc chỉnh lại** biến TURN của Metered trừ khi bạn cần thay credential. `/config` có thông tin TURN nhạy cảm, không chia sẻ nguyên JSON.
+6. Đợi Render Live, mở `/health` kiểm tra `ok:true`, rồi mở website và `Ctrl + Shift + R`.
+7. Kiểm thử với 2 thiết bị: Host bấm Quay, máy khác cũng phải thấy cùng kết quả; bình chọn mỗi người 1 lần; truyền lượt hát không tự bật mic; Youtube/Autotune/Mixer vẫn sử dụng được.
+
+Không cần khai báo biến môi trường mới cho Party Games. Port mặc định local vẫn `3002`; trên Render sử dụng `PORT` do Render cấp.
+
+---
+
 # Deploy KaraokeVerse v1.2.3 – Karaoke Mixer Pro
 
 - Upload toàn bộ nội dung ZIP lên GitHub và xác minh có `public/audio-mixer.js`, `public/app.js`, `public/index.html`, `public/style.css`, `public/autotune-processor.js`, `lib/`.

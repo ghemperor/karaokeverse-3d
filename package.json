@@ -1,13 +1,13 @@
 {
   "name": "karaokeverse-3d",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "type": "module",
-  "description": "Karaoke Mixer Pro and Auto-Tune, Immersive Three.js karaoke party: articulated avatars, stage lighting, synchronized props, YouTube, chat and WebRTC",
+  "description": "KaraokeVerse Party Games: multiplayer spinning wheel, karaoke challenges, mic turn passing, live poll; Three.js, YouTube, Auto-Tune, Mixer Pro and WebRTC",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-interactions.js && node --check public/audio-mixer.js && node --check public/autotune-math.js && node --check public/autotune-processor.js && node --test tests/*.test.js"
+    "check": "node --check server.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-interactions.js && node --check public/audio-mixer.js && node --check public/autotune-math.js && node --check public/autotune-processor.js && node --check public/party-data.js && node --check public/party-wheel.js && node --check public/party-ui.js && node --check lib/party-games.js && node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=20"

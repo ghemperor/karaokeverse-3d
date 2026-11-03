@@ -8,6 +8,7 @@ import { youtubeId, cleanName, cleanText, cleanRoomCode, cleanAvatar } from './l
 import { cleanPosition } from './lib/position.js';
 import { createWorld, updateWorld, cleanEmote } from './lib/world.js';
 import { createPerformance, requestPerformance, leavePerformance, nextPerformance } from './lib/performance.js';
+import { createPartyGames, startSpin, passStage, openPoll, castVote, closePoll, publicParty, memberLeavesParty, CHALLENGES } from './lib/party-games.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -55,7 +56,7 @@ function serialize(room) {
     users: [...room.users.values()],
     queue: room.queue, player: room.player,
     chat: room.chat.slice(-25),
-    world: room.world, performance: room.performance,
+    world: room.world, performance: room.performance, partyGames: publicParty(room.partyGames),
     createdAt: room.createdAt,
   };
 }
@@ -69,6 +70,7 @@ function leave(socket) {
   if (!room) return;
   room.users.delete(socket.id);
   room.performance = leavePerformance(room.performance, socket.id);
+  room.partyGames = memberLeavesParty(room.partyGames, socket.id);
   socket.to(code).emit('user:left', { id: socket.id });
   if (!room.users.size) { rooms.delete(code); return; }
   if (room.hostId === socket.id) room.hostId = room.users.keys().next().value;
@@ -103,7 +105,7 @@ io.on('connection', (socket) => {
       const code = codeNew();
       const room = {
         code, hostId: socket.id, users: new Map(), queue: [], chat: [],
-        world: createWorld(), performance: createPerformance(),
+        world: createWorld(), performance: createPerformance(), partyGames: createPartyGames(),
         player: { videoId: null, playing: false, position: 0, updatedAt: Date.now() },
         createdAt: Date.now(),
       };
@@ -181,6 +183,65 @@ io.on('connection', (socket) => {
       return ack?.({ ok: false, error: 'Chỉ chủ phòng được chuyển lượt.' });
     room.performance=nextPerformance(room.performance);
     broadcastRoom(room);
+    ack?.({ ok: true });
+  });
+  // Party Games: every selection and permission is validated on the server.
+  socket.on('party:spin', (payload, ack) => {
+    const room = getRoom(socket);
+    if (!room || room.hostId !== socket.id) return ack?.({ ok: false, error: 'Chỉ chủ phòng được quay vòng.' });
+    const now = Date.now();
+    if (now - (socket.data.lastSpinAt || 0) < 1200) return ack?.({ ok: false, error: 'Hãy đợi trước khi quay tiếp.' });
+    const result = startSpin(room.partyGames, [...room.users.keys()], payload?.category, now);
+    if (!result.ok) return ack?.({ ok: false, error: result.error });
+    socket.data.lastSpinAt = now;
+    room.partyGames = result.party;
+    io.to(room.code).emit('party:state', publicParty(room.partyGames));
+    ack?.({ ok: true });
+  });
+  socket.on('party:pass', (payload, ack) => {
+    const room = getRoom(socket);
+    if (!room) return ack?.({ ok: false, error: 'Bạn chưa tham gia phòng.' });
+    const now = Date.now();
+    if (now - (socket.data.lastPassAt || 0) < 1000) return ack?.({ ok: false, error: 'Truyền micro quá nhanh.' });
+    const result = passStage(room.performance, socket.id, payload?.toId, room.hostId === socket.id, [...room.users.keys()]);
+    if (!result.ok) return ack?.({ ok: false, error: result.error });
+    room.performance = result.performance;
+    room.partyGames.lastPass = { fromId: socket.id, toId: payload.toId, at: now };
+    socket.data.lastPassAt = now;
+    broadcastRoom(room);
+    ack?.({ ok: true });
+  });
+  socket.on('party:poll:start', (_, ack) => {
+    const room = getRoom(socket);
+    if (!room || room.hostId !== socket.id) return ack?.({ ok: false, error: 'Chỉ chủ phòng được mở bình chọn.' });
+    const result = openPoll(room.partyGames, [...room.users.keys()]);
+    if (!result.ok) return ack?.({ ok: false, error: result.error });
+    room.partyGames = result.party;
+    const id = result.party.poll.id;
+    io.to(room.code).emit('party:state', publicParty(room.partyGames));
+    setTimeout(() => {
+      if (rooms.get(room.code) !== room || room.partyGames.poll.id !== id || room.partyGames.poll.status !== 'open') return;
+      const closed = closePoll(room.partyGames);
+      if (closed.ok) { room.partyGames = closed.party; io.to(room.code).emit('party:state', publicParty(room.partyGames)); }
+    }, Math.max(0, result.party.poll.endsAt - Date.now()) + 25).unref?.();
+    ack?.({ ok: true });
+  });
+  socket.on('party:poll:vote', (payload, ack) => {
+    const room = getRoom(socket);
+    if (!room) return ack?.({ ok: false, error: 'Bạn chưa tham gia phòng.' });
+    const result = castVote(room.partyGames, socket.id, payload?.targetId, [...room.users.keys()]);
+    if (!result.ok) return ack?.({ ok: false, error: result.error });
+    room.partyGames = result.party;
+    io.to(room.code).emit('party:state', publicParty(room.partyGames));
+    ack?.({ ok: true });
+  });
+  socket.on('party:poll:close', (_, ack) => {
+    const room = getRoom(socket);
+    if (!room || room.hostId !== socket.id) return ack?.({ ok: false, error: 'Chỉ chủ phòng được kết thúc bình chọn.' });
+    const result = closePoll(room.partyGames);
+    if (!result.ok) return ack?.({ ok: false, error: result.error });
+    room.partyGames = result.party;
+    io.to(room.code).emit('party:state', publicParty(room.partyGames));
     ack?.({ ok: true });
   });
   socket.on('reaction:send', (payload) => {

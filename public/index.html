@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0920"/>
   <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
-  <title>KaraokeVerse 3D v1.2.3 • Karaoke Mixer & Auto-Tune</title>
+  <title>KaraokeVerse 3D v1.2.4 • Party Games</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -69,6 +69,46 @@
             <button class="party-btn" id="party-mode" disabled>🪩 Party mode</button>
           </div>
         </div>
+        <details class="party-games-panel" id="party-games-panel" open>
+          <summary><span>🎲 PARTY GAMES • VÒNG QUAY & BÌNH CHỌN</span><small id="party-game-badge">CHỜ CHỦ PHÒNG</small><span class="autotune-chevron">⌄</span></summary>
+          <div class="pg-body">
+            <section class="pg-wheel-card" aria-label="Vòng quay chọn người hát">
+              <div class="pg-section-title"><b>🎡 Vòng quay may mắn</b><span>Mọi người thấy cùng một kết quả</span></div>
+              <div class="pg-wheel-frame"><div class="pg-pointer" aria-hidden="true">▼</div><canvas id="party-wheel" width="280" height="280" aria-label="Vòng quay thành viên"></canvas></div>
+              <div class="pg-spin-controls">
+                <label for="party-category">Loại thử thách
+                  <select id="party-category"><option value="all">🎉 Ngẫu nhiên</option><option value="fun">😂 Vui nhộn</option><option value="sing">🎼 Giọng hát</option><option value="duet">👯 Cùng bạn bè</option></select>
+                </label>
+                <button class="pg-primary" id="party-spin" disabled>🎡 Quay chọn người</button>
+              </div>
+              <p class="pg-help">Chủ phòng bắt đầu vòng quay. Người được chọn có thể từ chối thử thách.</p>
+            </section>
+            <section class="pg-challenge-card" aria-label="Thử thách và truyền micro">
+              <div class="pg-section-title"><b>✨ Thử thách hiện tại</b><span id="party-round-count">CHƯA QUAY</span></div>
+              <div class="pg-challenge-main" id="party-challenge-card" aria-live="polite">
+                <span class="pg-challenge-icon" id="party-challenge-icon">🎲</span>
+                <span class="pg-challenge-label" id="party-challenge-label">Vòng quay sẵn sàng</span>
+                <strong id="party-challenge-title">Ai sẽ là người tiếp theo?</strong>
+                <p id="party-challenge-detail">Nhấn quay để chọn người hát và nhận thử thách vui.</p>
+              </div>
+              <div class="pg-mic-transfer">
+                <label for="party-mic-target">🎤 Truyền lượt hát cho
+                  <select id="party-mic-target" aria-label="Chọn người nhận lượt hát"><option value="">Chọn người chơi</option></select>
+                </label>
+                <button id="party-pass-mic" class="pg-secondary" disabled>🎤 Truyền micro</button>
+                <button id="party-pass-winner" class="pg-secondary" disabled>✨ Mời người vừa quay</button>
+              </div>
+              <p class="pg-help">Truyền micro là chuyển lượt biểu diễn, không tự bật micro vật lý của người nhận. Người nhận cần tự cấp quyền và bật micro.</p>
+            </section>
+            <section class="pg-vote-card" aria-label="Bình chọn người biểu diễn">
+              <div class="pg-section-title"><b>🏆 Bình chọn giọng hát</b><span id="party-vote-status">CHƯA MỞ</span></div>
+              <p class="pg-help">Mỗi người có 1 phiếu, không bình chọn chính mình. Kết quả được đồng bộ cả phòng.</p>
+              <div class="pg-vote-top"><button class="pg-primary" id="party-vote-start" disabled>🗳 Mở bình chọn 60 giây</button><button class="pg-secondary" id="party-vote-close" disabled>🏁 Kết thúc</button></div>
+              <div id="party-vote-results" class="pg-vote-results"><p class="pg-help">Chủ phòng mở bình chọn để mọi người chọn giọng hát yêu thích.</p></div>
+              <div id="party-vote-winners" class="pg-vote-winners" aria-live="polite"></div>
+            </section>
+          </div>
+        </details>
         <div class="bottom-controls"><div class="ctrl-section"><button id="mic-button" class="control-btn" disabled><span class="control-icon">🎙</span><span id="mic-label">Bật micro</span></button><button id="ptt-button" class="control-btn" disabled title="Giữ phím Space để nói khi chế độ này được bật"><span class="control-icon">◉</span><span id="ptt-label">Open mic</span></button><button id="sound-button" class="control-btn"><span class="control-icon">🔈</span><span>Âm lượng</span></button><input id="voice-volume" aria-label="Âm lượng người khác" type="range" min="0" max="100" value="85"/></div><div class="ctrl-section"><button id="copy-room-bottom" class="control-btn accent-control" disabled>✉ Mời bạn bè</button></div></div>
         <details class="mixer-panel" id="mixer-panel" open>
           <summary><span>🎚 MIXER KARAOKE PRO</span><small id="mixer-badge">SẴN SÀNG</small><span class="autotune-chevron">⌄</span></summary>
@@ -161,7 +201,7 @@
         <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
       </aside>
     </main>
-    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.3 • KARAOKE MIXER</span></footer>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.2.4 • PARTY GAMES</span></footer>
   </div>
   <div id="welcome-screen" class="modal-layer">
     <div class="welcome-glow"></div>

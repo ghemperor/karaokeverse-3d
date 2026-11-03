@@ -1,4 +1,43 @@
-# KaraokeVerse 3D v1.2.3 — Karaoke Mixer Pro + Auto-Tune (beta)
+# KaraokeVerse 3D v1.2.4 — Party Games Multiplayer
+
+**Cập nhật trên nền v1.2.3 Mixer Pro**: thêm vòng quay chọn thành viên, thẻ thử thách hát vui, truyền lượt cầm micro và bình chọn trực tiếp (không mất các chức năng 3D/YouTube/voice chat/Auto-Tune/Echo/Reverb/EQ/TURN đã có).
+
+## Tính năng Party Games
+
+- **Vòng quay may mắn:** Host bấm **🎡 Quay chọn người**. Server chọn người bằng `crypto.randomInt`, chọn ngẫu nhiên 1 trong 14 thử thách theo nhóm Ngẫu nhiên/Vui nhộn/Giọng hát/Cùng bạn bè. Tất cả người trong phòng nhận **cùng một kết quả**, hiệu ứng quay ~5,2 giây trên từng thiết bị. Nhóm thách đố không có hình phạt ép buộc; người được chọn có thể từ chối.
+- **Thẻ thử thách:** hiển thị người trúng, tên thử thách và hướng dẫn ngắn; được đồng bộ qua Socket.IO.
+- **Truyền micro:** Host hoặc người đang giữ lượt hát có thể chuyển lượt biểu diễn cho người khác; người ở hàng chờ được loại khỏi hàng chờ khi nhận lượt. Đây là **quyền biểu diễn**, KHÔNG tự bật micro vật lý, KHÔNG chiếm quyền thiết bị của người nhận. Họ tự bật micro và cấp quyền truy cập.
+- **Bình chọn trực tiếp:** Host mở vòng bầu 60 giây, thành viên có 1 phiếu và không thể bầu chính mình. Các phiếu được kiểm tra trên server, hiển thị tổng phiếu theo thời gian thực, công bố người có nhiều phiếu nhất khi hết thời gian hoặc Host kết thúc. Nếu hòa sẽ hiển thị đồng hạng.
+- **Khi thành viên thoát:** bình chọn đang mở bỏ các phiếu liên quan đến người rời; lượt hát tự xử lý qua hệ thống stage đã có. Kết quả vòng quay vẫn còn như lịch sử của lượt gần nhất nhưng không thể mời người đã rời phòng.
+
+## Cách sử dụng
+
+1. Giải nén toàn bộ, chạy `CHAY-TREN-WINDOWS.bat`; mặc định vào **http://localhost:3002** (nếu port 3002 bận: `CHAY-TREN-WINDOWS.bat 3003`).
+2. Tạo phòng và mời người khác vào cùng mã phòng. Mở mục **🎲 PARTY GAMES** dưới khung biểu diễn.
+3. Host chọn loại thử thách, bấm **Quay chọn người**. Chờ kết quả; có thể bấm **Mời người vừa quay** để chuyển lượt hát.
+4. Host hoặc ca sĩ đang giữ lượt dùng **Truyền micro** để chọn một thành viên khác. Người nhận tự bật micro.
+5. Host bấm **Mở bình chọn 60 giây**. Mỗi người chọn một thành viên khác; chờ hết giờ hoặc bấm **Kết thúc** để xem kết quả.
+6. Người ở hai mạng khác nhau cần kết nối voice qua STUN/TURN; cài đặt TURN đã có trên Render tiếp tục được giữ nguyên.
+
+## Deploy lên GitHub và Render
+
+- Sử dụng gói **GitHub Update** đi kèm nếu repo đã có v1.2.3. **Giữ nguyên cấu trúc thư mục** và upload *tất cả* các file bên trong bản cập nhật (đừng tạo thêm thư mục bao ngoài trong repo).
+- Đặc biệt phải có `lib/party-games.js`, `public/party-data.js`, `public/party-wheel.js`, `public/party-ui.js`, `server.js`, `public/app.js`, `public/index.html`, `public/style.css` và `package.json`.
+- Trên Render: Build `npm install`, Start `npm start`. Khi Auto Deploy bật trên nhánh `main`, commit GitHub sẽ kích hoạt cập nhật. **Không xóa** `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD` khỏi Render Environment.
+- Kiểm tra `https://<your-service>.onrender.com/health` và truy cập game. Hard refresh `Ctrl + Shift + R` sau deploy.
+
+## Kiểm thử và giới hạn
+
+- Chạy `npm run check`: kiểm tra cú pháp JS và các test logic, bao gồm chọn người ngẫu nhiên, chống bình chọn trùng, quyền truyền lượt, điều kiện thoát phòng.
+- Đã chạy **kiểm thử giao diện Party Games riêng bằng Chromium giả lập** (vòng quay, đếm ngược, hiển thị thẻ, bình chọn một lần). **Chưa xác minh end-to-end** với Render, hai trình duyệt qua Socket.IO thực hoặc âm thanh WebRTC đa thiết bị.
+- Trạng thái game đang lưu **trong RAM của Node.js**, sẽ mất khi Render restart/deploy; dùng 1 instance, chưa chia sẻ trạng thái qua Redis/database.
+- Bình chọn dùng socket ID phiên hiện tại, chống bình chọn hai lần trong **một phiên kết nối**; người tham gia thoát/rejoin có thể có ID mới. Vận hành công khai nên bổ sung đăng nhập và kiểm soát lạm dụng.
+- Không tự động phát đoạn nhạc, tách vocal hoặc phân tích tín hiệu âm thanh YouTube để chấm điểm. Video vẫn dùng YouTube IFrame API.
+- TURN credentials cố định được máy chủ gửi xuống client trong `/config` như bản trước; với hệ thống công khai nên chuyển sang credential ngắn hạn và thu hồi thông tin từng lộ.
+
+---
+
+# Lịch sử: v1.2.3 Mixer Pro
 
 ## Nâng cấp 1.2.3: Bàn mixer karaoke chuyên nghiệp
 

@@ -1,5 +1,6 @@
 import { AUTOTUNE_DEFAULTS, NOTE_NAMES, normalizeAutotune } from './autotune-math.js';
 import { MIXER_DEFAULTS, MIXER_RANGES, normalizeMixer, presetMixer, createKaraokeMixer } from './audio-mixer.js';
+import { createPartyUI } from './party-ui.js';
 
 const $ = (id) => document.getElementById(id);
 const AVATARS = ['😎','🤩','🥳','🦊','🐱','🐼','👽','🐻'];
@@ -78,6 +79,14 @@ function emitAck(event,payload){return new Promise((resolve)=>{
   if(!socket.connected){resolve({ok:false,error:'Mất kết nối với máy chủ.'});return;}
   socket.timeout(8000).emit(event,payload,(err,result)=>resolve(err?{ok:false,error:'Máy chủ không phản hồi.'}:result));
 });}
+const partyUI = createPartyUI({
+  getRoom:()=>state.room,
+  getMyId:()=>state.myId,
+  isHost:roomHost,
+  emitAck,
+  toast,
+  celebrate:(emoji)=>{createReaction(emoji);state.scene?.playReaction(emoji);},
+});
 function setControlsEnabled(enabled){
   for(const id of ['copy-invite','leave-room','copy-room-bottom','song-url','add-song','chat-input','send-chat','mic-button','ptt-button'])$(id).disabled=!enabled;
   for(const btn of document.querySelectorAll('[data-reaction], [data-emote]'))btn.disabled=!enabled;
@@ -137,6 +146,7 @@ function resetAndLeave(showToast=true){
   state.isMicOn=false;state.transmitting=false;
   $('autotune-pitch').textContent = 'Chưa nhận diện cao độ';
   state.myId=null;state.room=null;state.lastSingerId=null;state.currentVideoId=null;state.pendingSignals=[];
+  partyUI.reset();
   state.scene?.setLocalUser(null);state.scene?.setMembers([]);state.scene?.setPerformance(null);state.scene?.setView('front');
   if(state.youtubeReady) {try{state.youtube.stopVideo()}catch{}}
   state.scene?.tvPlaceholder?.style.setProperty('display','flex');
@@ -239,7 +249,7 @@ function renderPerformance(){
   }
 }
 function renderRoom(){
-  renderMembers();renderQueue();renderChat();renderPerformance();
+  renderMembers();renderQueue();renderChat();renderPerformance();partyUI.render();
   $('status-label').textContent=state.room?`Phòng ${state.room.code} • ${state.room.users.length} người`:'Chưa tham gia phòng';
   $('scene-status').textContent=state.room?'Đang trực tuyến':'Đang chờ';
   const active=state.room?.player?.videoId;
@@ -741,6 +751,11 @@ socket.on('chat:new',message=>{
 });
 socket.on('player:sync',p=>{if(!state.room)return;state.room.player=p;$('control-play').textContent=p.playing?'Ⅱ':'▶';syncYoutube();});
 socket.on('signal:webrtc',receiveSignal);
+socket.on('party:state', (partyGames)=>{
+  if(!state.room || !partyGames)return;
+  state.room.partyGames=partyGames;
+  partyUI.render();
+});
 socket.on('world:state',({world}={})=>{
   if(!state.room || !world)return;
   state.room.world=world;

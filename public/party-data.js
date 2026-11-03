@@ -1,0 +1,16 @@
+export const CHALLENGES = Object.freeze([
+  { id: 'dance', category: 'fun', icon: '💃', title: 'Hát và nhảy', detail: 'Hát một đoạn và nhảy theo phong cách riêng của bạn.' },
+  { id: 'robot', category: 'fun', icon: '🤖', title: 'Giọng người máy', detail: 'Hát một đoạn bằng chất giọng robot vui nhộn.' },
+  { id: 'dramatic', category: 'fun', icon: '🎭', title: 'Diễn sâu', detail: 'Hát như đang diễn một cảnh phim cực kỳ cảm xúc.' },
+  { id: 'slowmotion', category: 'fun', icon: '🐢', title: 'Slow motion', detail: 'Thể hiện một đoạn thật chậm và làm động tác slow motion.' },
+  { id: 'whisper', category: 'fun', icon: '🤫', title: 'Hát nhỏ nhẹ', detail: 'Hát một đoạn bằng giọng nhẹ nhàng, không cần tăng âm lượng.' },
+  { id: 'duet', category: 'duet', icon: '👯', title: 'Mời song ca', detail: 'Mời một người cùng hát một đoạn, cả hai có thể từ chối.' },
+  { id: 'relay', category: 'duet', icon: '🎤', title: 'Truyền câu hát', detail: 'Hát một câu rồi mời người tiếp theo hát tiếp.' },
+  { id: 'echo', category: 'duet', icon: '🔁', title: 'Hát đáp', detail: 'Một người hát câu đầu, người còn lại hát câu đáp.' },
+  { id: 'chorus', category: 'duet', icon: '🎶', title: 'Cả phòng hát', detail: 'Mời cả phòng tham gia một đoạn điệp khúc.' },
+  { id: 'highnote', category: 'sing', icon: '🌟', title: 'Nốt cao yêu thích', detail: 'Thử một câu hát có nốt cao vừa sức; không cần gắng giọng.' },
+  { id: 'ballad', category: 'sing', icon: '🌙', title: 'Ballad cảm xúc', detail: 'Thể hiện một đoạn bằng phong cách ballad tình cảm.' },
+  { id: 'rap', category: 'sing', icon: '🎙️', title: 'Đổi sang rap', detail: 'Thử đọc một đoạn theo nhịp rap của bạn.' },
+  { id: 'acapella', category: 'sing', icon: '🎼', title: 'A cappella', detail: 'Hát một đoạn ngắn không cần nhạc nền.' },
+  { id: 'genre', category: 'sing', icon: '🎸', title: 'Đổi thể loại', detail: 'Biến một câu hát thành pop, rock hoặc jazz.' },
+]);
