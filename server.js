@@ -11,6 +11,7 @@ import { createWorld, updateWorld, cleanEmote } from './lib/world.js';
 import { createPerformance, requestPerformance, leavePerformance, nextPerformance } from './lib/performance.js';
 import { createPartyGames, startSpin, passStage, openPoll, castVote, closePoll, publicParty, memberLeavesParty, CHALLENGES } from './lib/party-games.js';
 import { createGifts, sendGift, publicGifts, memberLeavesGifts } from './lib/gifts.js';
+import { createNPCState, performNPCAction, publicNPCs, npcMemberLeaves } from './lib/npc-service.js';
 import { createBattle, configureBattle, advanceBattle, castBattleVote, finishBattleVote, cancelBattle, memberLeavesBattle, publicBattle, currentBattleSinger, isBattleActive } from './lib/battle.js';
 
 const app = express();
@@ -59,7 +60,7 @@ function serialize(room) {
     users: [...room.users.values()],
     queue: room.queue, player: room.player,
     chat: room.chat.slice(-25),
-    world: room.world, performance: room.performance, partyGames: publicParty(room.partyGames), gifts: publicGifts(room.gifts), battle: publicBattle(room.battle),
+    world: room.world, performance: room.performance, partyGames: publicParty(room.partyGames), gifts: publicGifts(room.gifts), battle: publicBattle(room.battle), npcs: publicNPCs(room.npcs),
     createdAt: room.createdAt,
   };
 }
@@ -127,6 +128,7 @@ function leave(socket) {
   room.partyGames = memberLeavesParty(room.partyGames, socket.id);
   room.gifts = memberLeavesGifts(room.gifts, socket.id);
   room.battle = memberLeavesBattle(room.battle, socket.id);
+  room.npcs = npcMemberLeaves(room.npcs, socket.id);
   syncBattlePerformance(room);
   socket.to(code).emit('user:left', { id: socket.id });
   if (!room.users.size) { rooms.delete(code); return; }
@@ -163,7 +165,7 @@ io.on('connection', (socket) => {
       const room = {
         code, hostId: socket.id, users: new Map(), queue: [], chat: [],
         world: createWorld(), performance: createPerformance(), partyGames: createPartyGames(), gifts: createGifts(),
-        battle: createBattle(), beforeBattlePerformance: null,
+        battle: createBattle(), beforeBattlePerformance: null, npcs:createNPCState(),
         player: { videoId: null, playing: false, position: 0, updatedAt: Date.now() },
         createdAt: Date.now(),
       };
@@ -207,6 +209,20 @@ io.on('connection', (socket) => {
     user.avatarProfile=profile;
     io.to(room.code).emit('user:avatar',{id:socket.id,profile});
     ack?.({ok:true,profile});
+  });
+  socket.on('npc:action', (payload, ack) => {
+    const room=getRoom(socket);
+    if(!room)return ack?.({ok:false,error:'Bạn phải vào phòng để tương tác NPC.'});
+    const now=Date.now();
+    if(now-(socket.data.lastNPCAt||0)<750)return ack?.({ok:false,error:'Bạn thao tác quá nhanh, hãy thử lại.'});
+    socket.data.lastNPCAt=now;
+    const actor=room.users.get(socket.id);
+    const result=performNPCAction(room.npcs,payload,actor,room.hostId===socket.id,now);
+    if(!result.ok)return ack?.({ok:false,error:result.error});
+    room.npcs=result.state;
+    io.to(room.code).emit('npc:state',publicNPCs(room.npcs));
+    io.to(room.code).emit('npc:message',{text:result.message});
+    ack?.({ok:true});
   });
   socket.on('world:action', (payload, ack) => {
     const room = getRoom(socket);

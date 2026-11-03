@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0920"/>
   <meta name="description" content="KaraokeVerse 3D — vào phòng, mở YouTube, hát và trò chuyện cùng bạn bè."/>
-  <title>KaraokeVerse 3D v1.4 • Avatar Studio</title>
+  <title>KaraokeVerse 3D v1.4.1 • Private Party</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -147,6 +147,30 @@
             <p class="gift-help">Quà chỉ mang tính giải trí, không sử dụng tiền thật hoặc Coin. Giới hạn 1 lượt gửi / 1,6 giây để tránh spam.</p>
           </div>
         </details>
+        <details class="npc-panel" id="npc-panel">
+          <summary><span>🎧 DJ & NHÂN VIÊN PHỤC VỤ • NPC</span><small>PHÒNG RIÊNG</small><span class="autotune-chevron">⌄</span></summary>
+          <div class="npc-body">
+            <p class="npc-info">🎶 Gặp <b>DJ Luna</b> tại bàn mix và các nhân viên NPC trưởng thành trong phòng. Gọi đến bàn, chọn đồ uống mô phỏng, cụng ly và nói lời cảm ơn. Không phải nhân viên hay giao dịch thật.</p>
+            <div class="npc-fields">
+              <label>Chọn nhân vật <select id="npc-select" aria-label="Chọn nhân vật NPC"></select></label>
+              <label>Đặt tên (chủ phòng) <span class="npc-rename"><input id="npc-name" maxlength="22" placeholder="Tên NPC" aria-label="Tên nhân vật NPC"/><button id="npc-rename" type="button">Đổi tên</button></span></label>
+            </div>
+            <p id="npc-status" class="npc-status">Chưa tham gia phòng.</p>
+            <div id="npc-actions-staff" class="npc-actions">
+              <button data-npc-action="call" type="button">🙋 Gọi đến bàn</button>
+              <label class="npc-drink">Đồ uống <select id="npc-drink" aria-label="Đồ uống"><option value="beer">🍺 Bia</option><option value="soda">🥤 Nước ngọt</option><option value="water">💧 Nước lọc</option></select></label>
+              <button data-npc-action="serve" type="button">🥤 Mang đồ uống</button>
+              <button data-npc-action="cheers" type="button">🥂 Mời cụng ly</button>
+              <button data-npc-action="thanks" type="button">💜 Cảm ơn & tiễn</button>
+              <button data-npc-action="dismiss" type="button">↩ Về quầy</button>
+            </div>
+            <div id="npc-actions-dj" class="npc-actions" hidden>
+              <button data-npc-action="greet" type="button">👋 Chào DJ</button>
+              <button data-npc-action="dj-toggle" type="button">🎧 Bật/tắt DJ (chủ phòng)</button>
+            </div>
+            <div id="npc-feed" class="npc-feed" aria-live="polite"></div>
+          </div>
+        </details>
         <div class="bottom-controls"><div class="ctrl-section"><button id="mic-button" class="control-btn" disabled><span class="control-icon">🎙</span><span id="mic-label">Bật micro</span></button><button id="ptt-button" class="control-btn" disabled title="Giữ phím Space để nói khi chế độ này được bật"><span class="control-icon">◉</span><span id="ptt-label">Open mic</span></button><button id="sound-button" class="control-btn"><span class="control-icon">🔈</span><span>Âm lượng</span></button><input id="voice-volume" aria-label="Âm lượng người khác" type="range" min="0" max="100" value="85"/></div><div class="ctrl-section"><button id="copy-room-bottom" class="control-btn accent-control" disabled>✉ Mời bạn bè</button></div></div>
         <details class="mixer-panel" id="mixer-panel" open>
           <summary><span>🎚 MIXER KARAOKE PRO</span><small id="mixer-badge">SẴN SÀNG</small><span class="autotune-chevron">⌄</span></summary>
@@ -239,7 +263,26 @@
         <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Nhắn điều gì đó..." maxlength="320" disabled aria-label="Tin nhắn"/><button id="send-chat" type="submit" disabled title="Gửi tin nhắn">➤</button></form>
       </aside>
     </main>
-    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.4 • AVATAR STUDIO</span></footer>
+    <nav id="mobile-dock" class="mobile-dock" aria-label="Điều hướng KaraokeVerse trên điện thoại">
+      <button type="button" data-mobile-target="stage-scene">🎬<span>Phòng 3D</span></button>
+      <button type="button" data-mobile-target="songs-panel">🎵<span>Bài hát</span></button>
+      <button type="button" data-mobile-target="mic-button">🎙<span>Micro</span></button>
+      <button type="button" data-mobile-target="npc-panel">🍹<span>DJ & NPC</span></button>
+      <button type="button" data-mobile-target="social-panel">💬<span>Chat</span></button>
+      <button type="button" id="mobile-all-features" aria-expanded="false">☷<span>Tất cả</span></button>
+    </nav>
+    <div id="mobile-feature-sheet" class="mobile-feature-sheet hidden" role="dialog" aria-label="Tất cả tính năng KaraokeVerse" aria-modal="true">
+      <div class="mobile-feature-card"><div class="mobile-feature-head"><b>ĐI ĐẾN TÍNH NĂNG</b><button id="mobile-feature-close" type="button" aria-label="Đóng danh mục">✕</button></div>
+      <div class="mobile-feature-list">
+        <button data-mobile-target="stage-scene">🎬 Phòng karaoke 3D</button><button data-mobile-target="songs-panel">🎵 Playlist YouTube</button>
+        <button data-mobile-target="mic-button">🎙 Micro / Voice Chat</button><button data-mobile-target="mixer-panel">🎚 Mixer, Echo & Reverb</button>
+        <button data-mobile-target="autotune-panel">✨ Auto-Tune</button><button data-mobile-target="npc-panel">🍹 DJ & nhân viên NPC</button>
+        <button data-mobile-target="battle-panel">⚔️ Battle Arena</button><button data-mobile-target="party-games-panel">🎲 Party Games</button>
+        <button data-mobile-target="gift-panel">💝 Quà tặng</button><button data-mobile-target="avatar-edit-room">🧍 Avatar Studio</button>
+        <button data-mobile-target="social-panel">👥 Thành viên & Chat</button><button data-mobile-target="party-light">💡 Đèn & tương tác</button>
+      </div></div>
+    </div>
+    <footer class="footer"><span><span class="footer-dot">●</span> Built for the love of music</span><span>Three.js × WebRTC × Socket.IO × YouTube</span><span>BETA 1.4.1 • PRIVATE PARTY</span></footer>
   </div>
   <div id="welcome-screen" class="modal-layer">
     <div class="welcome-glow"></div>

@@ -334,6 +334,86 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     const tex=new THREE.CanvasTexture(canvas);const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
     const sprite=new THREE.Sprite(mat);sprite.scale.set(1.6,.4,1);sprite.position.y=2.06;return sprite;
   }
+  // v1.4.1: original stylized adult NPC characters; deliberately no external assets.
+  // Their behaviors are room-local, synchronized by the server, not separate player slots.
+  const npcActors=new Map();
+  const npcHome={dj:[-5.15,-3.12],linh:[4.10,-3.2],mai:[4.15,.25],vy:[4.15,4.55]};
+  function createNPCActor(id,name,palette){
+    const root=new THREE.Group();root.name=`NPC_${id}`;root.position.set(...[npcHome[id][0],0,npcHome[id][1]]);scene.add(root);
+    const skin=new THREE.MeshStandardMaterial({color:0xf1bb9b,roughness:.92});
+    const hair=new THREE.MeshStandardMaterial({color:palette.hair,roughness:.75});
+    const outfit=new THREE.MeshStandardMaterial({color:palette.outfit,roughness:.62,metalness:.06});
+    const trim=new THREE.MeshStandardMaterial({color:0xf4ddff,roughness:.6});
+    const ink=new THREE.MeshStandardMaterial({color:0x231b2d,roughness:.8});
+    const put=(parent,geo,material,x,y,z)=>{const m=new THREE.Mesh(geo,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;};
+    const body=new THREE.Group();root.add(body);
+    put(body,new THREE.CylinderGeometry(.19,.24,.50,16),outfit,0,1.05,0);
+    const torso=put(body,new THREE.CapsuleGeometry(.235,.36,8,16),outfit,0,1.37,0);
+    put(body,new THREE.CylinderGeometry(.32,.24,.47,20),outfit,0,.80,0);
+    put(body,new THREE.SphereGeometry(.09,12,8),skin,0,1.72,0);
+    const face=new THREE.Group();face.position.y=1.97;body.add(face);
+    put(face,new THREE.SphereGeometry(.28,20,14),skin,0,0,0);
+    put(face,new THREE.SphereGeometry(.30,20,12,0,Math.PI*2,0,Math.PI*.54),hair,0,.055,.01);
+    put(face,new THREE.SphereGeometry(.21,16,12),hair,0,-.13,.21).scale.set(1.08,1.6,.6);
+    for(const side of [-1,1]){
+      put(face,new THREE.SphereGeometry(.037,10,8),ink,side*.105,-.015,-.265);
+      put(face,new THREE.SphereGeometry(.052,12,8),skin,side*.265,-.065,0);
+      const arm=new THREE.Group();arm.position.set(side*.25,1.55,0);body.add(arm);
+      put(arm,new THREE.CapsuleGeometry(.092,.33,5,10),outfit,side*.02,-.29,0);
+      put(arm,new THREE.SphereGeometry(.086,12,8),skin,side*.02,-.60,0);
+      if(side===1)root.userData.rightArm=arm;
+    }
+    put(face,new THREE.SphereGeometry(.045,10,8),new THREE.MeshStandardMaterial({color:0xb45a73,roughness:.95}),0,-.15,-.275).scale.set(1.2,.42,.4);
+    for(const side of [-1,1]){
+      put(body,new THREE.CapsuleGeometry(.11,.46,6,12),new THREE.MeshStandardMaterial({color:0x332941,roughness:.78}),side*.13,.35,0);
+      put(body,new THREE.BoxGeometry(.25,.15,.38),ink,side*.13,.08,-.065);
+    }
+    if(id==='dj'){
+      const headphones=put(face,new THREE.TorusGeometry(.325,.04,7,23,Math.PI),trim,0,.10,0);
+      headphones.rotation.z=Math.PI;
+    }else{
+      put(body,new THREE.BoxGeometry(.30,.40,.035),trim,0,1.10,-.241);
+      put(body,new THREE.SphereGeometry(.08,10,8),trim,0,1.45,-.244);
+    }
+    const plate=textSprite(name);root.add(plate);plate.position.y=2.53;
+    register(torso,'npc',`${id==='dj'?'🎧 DJ':'🍹 Nhân viên'} ${name}`,{npcId:id});
+    root.userData={id,name,plate,hit:torso,body,rightArm:root.userData.rightArm,
+      home:new THREE.Vector3(npcHome[id][0],0,npcHome[id][1]),target:new THREE.Vector3(npcHome[id][0],0,npcHome[id][1]),
+      active:true,status:'idle',walkAmount:0};
+    npcActors.set(id,root);
+  }
+  // DJ workstation is separate from YouTube playback; it is a visual/party animation only.
+  const djDesk=new THREE.Mesh(new THREE.BoxGeometry(1.75,.76,.66),basicMat(0x3d285b,{metalness:.65,roughness:.3}));
+  djDesk.position.set(-5.18,.79,-2.35);scene.add(djDesk);
+  const djTop=new THREE.Mesh(new THREE.BoxGeometry(1.86,.045,.78),basicMat(0x100f22,{metalness:.7,roughness:.2}));
+  djTop.position.set(-5.18,1.18,-2.35);scene.add(djTop);
+  for(let i=0;i<2;i++){
+    const platter=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.04,32),basicMat(0x9c79ff,{metalness:.9,roughness:.25}));
+    platter.position.set(-5.55+i*.74,1.22,-2.35);scene.add(platter);
+  }
+  createNPCActor('dj','DJ Luna',{outfit:0x7e49c6,hair:0x3d255c});
+  createNPCActor('linh','Linh',{outfit:0x4a83b8,hair:0x362036});
+  createNPCActor('mai','Mai',{outfit:0x9b4e83,hair:0x402b24});
+  createNPCActor('vy','Vy',{outfit:0x538b81,hair:0x593a24});
+  function setNPCState(state){
+    if(!state)return;
+    const members=[state.dj,...(state.staff||[])];
+    members.forEach((npc,index)=>{
+      const g=npcActors.get(npc.id);if(!g)return;
+      const d=g.userData; d.active=npc.active!==false;d.status=npc.status||'idle';
+      if(npc.name&&npc.name!==d.name){
+        d.name=npc.name;d.plate.material.map.dispose();d.plate.material.dispose();g.remove(d.plate);
+        d.plate=textSprite(npc.name);d.plate.position.y=2.53;g.add(d.plate);
+        d.hit.userData.interactive.label=`${npc.id==='dj'?'🎧 DJ':'🍹 Nhân viên'} ${npc.name}`;
+      }
+      if(npc.id!=='dj'){
+        const staffIndex=['linh','mai','vy'].indexOf(npc.id);
+        const serving=npc.status==='serving';
+        d.target.set(serving?2.35:d.home.x,0,serving?1.35+staffIndex*.58:d.home.z);
+      }
+    });
+  }
+
   // Precompute a bent-elbow singing pose using two joint orientations.
   // The forearm quaternion is relative to the upper arm's current orientation.
   const shoulder=new THREE.Vector3(...SINGING_ARM.shoulder);
@@ -581,6 +661,8 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       enterWalk(seat.seat);isSeated=true;seatedSofaIndex=index;currentPose='sit';
       walk.yaw=seat.yaw;walk.pitch=.02;applyWalkView();sendMovement(true);
       callbacks.onInteract?.('sofa',{index});
+    }else if(type==='npc'){
+      callbacks.onNPCInteract?.(hit.action.npcId);
     }else if(type==='microphone'){
       callbacks.onInteract?.('microphone');
     }else if(type==='tv'){
@@ -904,6 +986,23 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       d.mouth.scale.y=sing&&!d.muted?1+Math.abs(Math.sin(t*9+d.seed))*3:1;
       if(!d.muted)d.indicator.scale.setScalar(1+Math.sin(t*5+d.seed)*.07);
     }
+    // Animate service NPC approaches and the DJ's hands each frame.
+    for(const g of npcActors.values()){
+      const d=g.userData;
+      const dx=d.target.x-g.position.x,dz=d.target.z-g.position.z;
+      const distance=Math.hypot(dx,dz);
+      const moving=distance>.06;
+      if(moving){
+        const step=Math.min(distance,dt*1.6);
+        g.position.x+=dx/distance*step;g.position.z+=dz/distance*step;
+        const yaw=Math.atan2(-dx,-dz);
+        g.rotation.y+=Math.atan2(Math.sin(yaw-g.rotation.y),Math.cos(yaw-g.rotation.y))*Math.min(1,dt*6);
+      } else if(d.id!=='dj')g.rotation.y=THREE.MathUtils.damp(g.rotation.y,d.status==='serving'?-Math.PI/2:0,5,dt);
+      const dance=d.id==='dj'&&d.active;
+      d.body.rotation.z=THREE.MathUtils.damp(d.body.rotation.z,dance?Math.sin(t*3.7)*.07:0,5,dt);
+      if(d.rightArm)d.rightArm.rotation.x=THREE.MathUtils.damp(d.rightArm.rotation.x,dance?-1+Math.sin(t*4)*.28:moving?Math.sin(t*8)*.23:d.status==='serving'?-1.15:0,7,dt);
+      d.body.position.y=(dance?Math.sin(t*5)*.035:moving?Math.abs(Math.sin(t*7))*.026:0);
+    }
     renderer.render(scene,camera);cssRenderer.render(cssScene,camera);
   }
   animate();
@@ -930,5 +1029,5 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){obj.material.map?.dispose?.();obj.material.dispose?.()}});
     webglContainer.replaceChildren();cssContainer.replaceChildren();
   }
-  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,applyAvatarProfile,setView,setEmote,setPerformance,setWorldState,setBattleState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,dispose};
+  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,applyAvatarProfile,setView,setEmote,setPerformance,setWorldState,setBattleState,setNPCState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,dispose};
 }

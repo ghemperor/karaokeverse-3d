@@ -4,6 +4,7 @@ import { createPartyUI } from './party-ui.js';
 import { createGiftUI } from './gift-ui.js';
 import { createBattleUI } from './battle-ui.js';
 import { createAvatarStudio } from './avatar-studio.js';
+import { createNPCUI } from './npc-ui.js';
 import { AVATAR_PALETTES, normalizeAvatarProfile } from './avatar-profile.js';
 
 const $ = (id) => document.getElementById(id);
@@ -125,6 +126,32 @@ const battleUI=createBattleUI({
   isHost:roomHost,
   emitAck,toast,scene:()=>state.scene,
 });
+const npcUI=createNPCUI({getRoom:()=>state.room,getMyId:()=>state.myId,isHost:roomHost,emitAck,toast,scene:()=>state.scene});
+function closeMobileSheet(){
+  $('mobile-feature-sheet').classList.add('hidden');
+  $('mobile-all-features').setAttribute('aria-expanded','false');
+}
+$('mobile-all-features').addEventListener('click',()=>{
+  const willOpen=$('mobile-feature-sheet').classList.contains('hidden');
+  $('mobile-feature-sheet').classList.toggle('hidden',!willOpen);
+  $('mobile-all-features').setAttribute('aria-expanded',String(willOpen));
+});
+$('mobile-feature-close').addEventListener('click',closeMobileSheet);
+$('mobile-feature-sheet').addEventListener('click',event=>{if(event.target===$('mobile-feature-sheet'))closeMobileSheet();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMobileSheet();});
+for(const btn of document.querySelectorAll('[data-mobile-target]'))btn.addEventListener('click',()=>{
+  const id=btn.dataset.mobileTarget;
+  closeMobileSheet();
+  if(id==='avatar-edit-room'){document.getElementById(id)?.click();return;}
+  const target=document.getElementById(id);
+  if(!target)return;
+  if(target.tagName==='DETAILS')target.open=true;
+  target.scrollIntoView({behavior:'smooth',block:'start'});
+  if(id==='mic-button')target.focus({preventScroll:true});
+});
+if(window.matchMedia('(max-width:720px)').matches){
+  for(const id of ['battle-panel','party-games-panel','gift-panel','mixer-panel','autotune-panel'])$(id).open=false;
+}
 function setControlsEnabled(enabled){
   for(const id of ['copy-invite','leave-room','copy-room-bottom','song-url','add-song','chat-input','send-chat','mic-button','ptt-button'])$(id).disabled=!enabled;
   for(const btn of document.querySelectorAll('[data-reaction], [data-emote]'))btn.disabled=!enabled;
@@ -185,7 +212,7 @@ function resetAndLeave(showToast=true){
   $('autotune-pitch').textContent = 'Chưa nhận diện cao độ';
   clearTimeout(avatarUpdateTimeout);
   state.myId=null;state.room=null;state.lastSingerId=null;state.currentVideoId=null;state.pendingSignals=[];
-  partyUI.reset();giftUI.reset();battleUI.reset();
+  partyUI.reset();giftUI.reset();battleUI.reset();npcUI.reset();
   state.scene?.setLocalUser(null);state.scene?.setMembers([]);state.scene?.setPerformance(null);state.scene?.setBattleState(null);state.scene?.setView('front');
   if(state.youtubeReady) {try{state.youtube.stopVideo()}catch{}}
   state.scene?.tvPlaceholder?.style.setProperty('display','flex');
@@ -290,7 +317,7 @@ function renderPerformance(){
   }
 }
 function renderRoom(){
-  renderMembers();renderQueue();renderChat();renderPerformance();partyUI.render();giftUI.render();battleUI.render();
+  renderMembers();renderQueue();renderChat();renderPerformance();partyUI.render();giftUI.render();battleUI.render();npcUI.render();
   state.scene?.setBattleState(state.room?.battle);
   $('status-label').textContent=state.room?`Phòng ${state.room.code} • ${state.room.users.length} người`:'Chưa tham gia phòng';
   $('scene-status').textContent=state.room?'Đang trực tuyến':'Đang chờ';
@@ -810,6 +837,8 @@ socket.on('battle:state',battle=>{
   battleUI.render();
   state.scene?.setBattleState(battle);
 });
+socket.on('npc:state',npcs=>{if(state.room){state.room.npcs=npcs;npcUI.render();}});
+socket.on('npc:message',payload=>{if(state.room&&payload?.text)toast(payload.text,4100);});
 socket.on('battle:champion',payload=>{if(state.room)battleUI.showChampion(payload);});
 socket.on('gift:show',gift=>{if(state.room)giftUI.showGift(gift);});
 socket.on('gifts:state',gifts=>{if(state.room){state.room.gifts=gifts;giftUI.render();}});
@@ -952,6 +981,7 @@ setInterval(()=>{
         $('scene-action').classList.toggle('show',Boolean(label)&&['walk','follow'].includes(view));
       },
       onWorldAction:(action)=>changeWorld(action),
+      onNPCInteract:(id)=>npcUI.selectNPC(id),
       onInteract:(type,details={})=>{
         const messages={
           microphone:'🎤 Đã gửi yêu cầu đăng ký hát. Nếu đến lượt, bạn sẽ lên sân khấu.',
@@ -969,7 +999,7 @@ setInterval(()=>{
       },
     });
     if(state.myId){state.scene.setLocalUser(state.myId);state.scene.applyAvatarProfile(state.myId,state.avatarProfile);}
-    if(state.room){state.scene.setMembers(state.room.users);state.scene.setWorldState(state.room.world);state.scene.setPerformance(state.room.performance?.singerId);state.scene.setBattleState(state.room.battle);}
+    if(state.room){state.scene.setMembers(state.room.users);state.scene.setWorldState(state.room.world);state.scene.setPerformance(state.room.performance?.singerId);state.scene.setBattleState(state.room.battle);state.scene.setNPCState(state.room.npcs);}
     if(state.room)ensureYoutube();
   }catch(err){
     console.error('3D scene unavailable',err);

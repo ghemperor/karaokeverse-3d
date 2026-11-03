@@ -241,3 +241,51 @@
 @media(max-width:900px){.stage-head{flex-wrap:wrap}.camera-options{width:100%}}
 
 .av-swatch.selected{background:var(--swatch)!important}
+
+/* v1.4.1 — NPC lounge and mobile first feature navigation */
+.npc-panel{margin:8px 2px 0;background:linear-gradient(135deg,#241a35,#17162b);border:1px solid #78558b;border-radius:12px;overflow:hidden;flex-shrink:0}
+.npc-panel summary{list-style:none;display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;font-weight:800;font-size:12px}.npc-panel summary::-webkit-details-marker{display:none}.npc-panel summary small{margin-left:auto;background:#4c2d69;border-radius:6px;padding:4px 7px;color:#e8c0ff;font-size:9px}.npc-body{padding:12px 16px 16px;display:grid;gap:12px}
+.npc-info{margin:0;line-height:1.65;color:#c2b5d7;font-size:12px}.npc-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.npc-fields label,.npc-drink{display:grid;gap:6px;color:#cfc4dc;font-size:11px;font-weight:700}
+.npc-fields input,.npc-fields select,.npc-drink select{min-width:0;width:100%;background:#120f22;border:1px solid #5b467d;border-radius:8px;padding:11px;color:#fff;font-size:13px}.npc-rename{display:flex;gap:6px}.npc-rename button,.npc-actions button{background:#39254e;border:1px solid #8a66ac;border-radius:8px;padding:9px 12px;color:#fff;font-size:12px;font-weight:700}.npc-rename button{white-space:nowrap}
+.npc-actions{display:flex;flex-wrap:wrap;align-items:end;gap:7px}.npc-actions[hidden]{display:none}.npc-actions button:hover:not(:disabled){background:#664080}.npc-actions button:disabled{opacity:.45}.npc-drink{min-width:126px}.npc-status{background:#2b1c44;border:1px solid #59447e;color:#f6d6ff;border-radius:8px;padding:10px;margin:0;font-size:12px}.npc-feed{max-height:116px;overflow-y:auto;display:grid;gap:5px;font-size:11px;color:#c8bde6}.npc-feed p{margin:0;padding:6px 9px;border-radius:7px;background:#ffffff08}
+.mobile-dock,.mobile-feature-sheet{display:none}
+@media(max-width:960px){
+  /* Never hide member/chat panels at intermediate tablet widths. */
+  .workspace{display:flex;flex-direction:column;overflow:visible;min-width:0}
+  .social-panel{display:flex!important;min-height:330px}
+  .songs-panel{min-height:260px}
+  body{overflow:auto}
+  #app{height:auto;min-height:100dvh}
+  .center-stage{min-width:0}
+}
+@media(max-width:720px){
+  body{overscroll-behavior-y:contain}
+  #app{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+  .mobile-dock{position:fixed;bottom:0;left:0;right:0;z-index:100;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;padding:7px 5px calc(8px + env(safe-area-inset-bottom,0px));background:#100e24f5;border-top:1px solid #624d88;box-shadow:0 -8px 28px #0008;backdrop-filter:blur(16px)}
+  .mobile-dock button{border:0;color:#f5eaff;background:transparent;border-radius:9px;padding:6px 1px;min-height:48px;font-size:21px;display:grid;justify-items:center;align-content:center;gap:3px}
+  .mobile-dock button:active,.mobile-dock button:focus-visible{background:#453268}.mobile-dock span{font-size:9px;white-space:nowrap}
+  .mobile-feature-sheet:not(.hidden){display:flex;position:fixed;inset:0;z-index:120;align-items:flex-end;justify-content:center;background:#05030bc9}
+  .mobile-feature-card{width:100%;max-width:650px;max-height:79dvh;overflow-y:auto;background:#1b1730;border:1px solid #74509c;border-radius:20px 20px 0 0;padding:17px 13px calc(20px + env(safe-area-inset-bottom,0px))}
+  .mobile-feature-head{display:flex;align-items:center;justify-content:space-between;padding:5px 8px 16px;font-size:13px;letter-spacing:1px}.mobile-feature-head button{background:#35234c;border:1px solid #8060ae;color:white;border-radius:10px;padding:9px 13px}
+  .mobile-feature-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mobile-feature-list button{min-height:54px;text-align:left;border-radius:10px;border:1px solid #5c4876;background:#2b2242;color:#fff;padding:12px;font-size:12px;font-weight:700}
+  .npc-fields{grid-template-columns:1fr}.npc-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.npc-actions button{min-height:44px}.npc-drink{min-width:0}
+  .center-stage,.songs-panel,.social-panel,.mixer-panel,.autotune-panel,.battle-panel,.party-games-panel,.gift-panel,.npc-panel,.stage-scene,.bottom-controls{scroll-margin-top:14px}
+  .stage-scene{height:min(53vh,470px);min-height:275px}
+  /* Keep the seek bar reachable instead of hiding it below 690px. */
+  .player-bar{flex-wrap:wrap;min-height:80px}.player-right{display:flex!important;flex:1 0 100%;gap:8px;min-width:0}
+  #video-seek{min-width:0;flex:1}
+  .bottom-controls{flex-wrap:wrap;gap:7px}.bottom-controls .ctrl-section{min-width:0;flex-wrap:wrap;justify-content:center}
+  .topbar{position:relative}.stage-head{gap:8px}.camera-options{flex-wrap:nowrap;overflow-x:auto;width:100%;justify-content:flex-start;scroll-snap-type:x proximity;scrollbar-width:thin}.camera-options button{flex:none;scroll-snap-align:start;min-height:36px;font-size:11px}
+  .party-buttons{overflow-x:auto;scrollbar-width:thin}.npc-panel summary{font-size:11px}
+}
+@media(max-width:720px){
+  .player-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;row-gap:9px;padding:11px;min-height:112px}
+  .player-left{grid-column:1;grid-row:1;min-width:0;overflow:hidden}
+  .player-left>div{min-width:0;overflow:hidden}
+  .player-left strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+  .player-left small{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .player-controls{grid-column:2;grid-row:1;justify-content:flex-end;flex-shrink:0}
+  .player-right{grid-column:1/-1;grid-row:2;width:100%;max-width:100%;margin:0;display:flex!important;min-width:0}
+  .player-right input{flex:1;min-width:0}
+  .sound-wave{display:none}
+}
