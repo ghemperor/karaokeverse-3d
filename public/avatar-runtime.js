@@ -104,15 +104,26 @@ export function createAvatarLibrary({onWarning=console.warn}={}){
     // For custom rigs, only clips contained in the licensed asset are played. A model with
     // no clips stays in its bind pose; incompatible rigs aren't falsely "retargeted".
     function play(action){
-      const matched=matchAnimationName(clipNames,action,cfg.animationAliases)
-        ||matchAnimationName(clipNames,'idle',cfg.animationAliases);
+      // A rig's first embedded clip is NOT automatically an idle animation.
+      // Select an animation only when its name (or a catalog alias) matches the game action.
+      const matched=matchAnimationName(clipNames,action,cfg.animationAliases);
       requested=action;
-      if(!matched){currentName=null;return;}
-      if(currentName===matched)return;
-      const next=actions.get(matched);if(!next)return;
+      if(!matched){
+        // Fade out a previous action so a Dance/Walk clip cannot keep looping
+        // after the player stops moving or changes to an unmapped action.
+        if(currentAction)currentAction.fadeOut(.18);
+        currentAction=null;
+        currentName=null;
+        return {requested:action,matched:null};
+      }
+      if(currentName===matched)return {requested:action,matched};
+      const next=actions.get(matched);
+      if(!next)return {requested:action,matched:null};
       next.reset().setLoop(THREE.LoopRepeat,Infinity).fadeIn(.24).play();
       if(currentAction&&currentAction!==next)currentAction.fadeOut(.24);
-      currentAction=next;currentName=matched;
+      currentAction=next;
+      currentName=matched;
+      return {requested:action,matched};
     }
     // When a rig contains bones but no usable animation, approximate basic movements.
     // This is NOT motion retargeting for arbitrary skeletons; use native clips for best results.
@@ -161,7 +172,8 @@ export function createAvatarLibrary({onWarning=console.warn}={}){
     }
     play('idle');
     return {group:contents,model,mixer,play,update,apply,dispose,external:!original,usedFallback,
-      source:usedFallback?DEFAULT_AVATAR_SRC:spec.src,clips:clipNames};
+      source:usedFallback?DEFAULT_AVATAR_SRC:spec.src,clips:clipNames,
+      resolvedActions:Object.fromEntries(['idle','walk','run','sit','sing','dance','wave','clap','cheer','bow','heart','pose'].map(action=>[action,matchAnimationName(clipNames,action,cfg.animationAliases)]))};
   }
   return {catalog,instantiate};
 }

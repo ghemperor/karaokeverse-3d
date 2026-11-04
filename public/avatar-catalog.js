@@ -26,7 +26,7 @@ export function validateAvatarCatalog(input){
   const aliases={};
   for(const k of AVATAR_ACTIONS){
     const a=source.animationAliases?.[k];
-    aliases[k]=Array.isArray(a)?a.filter(n=>typeof n==='string'&&n.length<=70&&/^[\w .-]+$/.test(n)).slice(0,12):DEFAULT_ANIMATIONS[k];
+    aliases[k]=Array.isArray(a)?a.filter(n=>typeof n==='string'&&n.length<=70&&/^[\w .|:()\[\]-]+$/.test(n)).slice(0,12):DEFAULT_ANIMATIONS[k];
     if(!aliases[k].includes(k))aliases[k].unshift(k);
   }
   return {models, fallback:DEFAULT_AVATAR_SRC, animationAliases:aliases};
@@ -41,5 +41,6 @@ export function matchAnimationName(clipNames,action,aliases){
   for(const wanted of variants){const found=names.find(n=>n.toLowerCase()===wanted.toLowerCase());if(found)return found;}
   // Some licensed assets use prefixes e.g. Armature|Idle.
   for(const wanted of variants){const found=names.find(n=>/(?:^|[|:._ -])([^|:._ -]+)$/i.exec(n)?.[1]?.toLowerCase()===wanted.toLowerCase());if(found)return found;}
-  return action==='idle'?(names[0]||null):null;
+  // Do not run the file's first clip as Idle: it may be Dance, Walk, or another unrelated action.
+  return null;
 }

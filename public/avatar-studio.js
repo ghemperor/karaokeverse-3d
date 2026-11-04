@@ -147,7 +147,12 @@ export function createAvatarStudio({getProfile,onChange,toast}){
       handle.group.traverse(o=>{if(o.isMesh)o.castShadow=true;});
       scene.add(handle.group);
       assetReady=true;host.querySelector('.av-preview-loading')?.remove();
-      status.textContent=`${handle.external?'Model tùy chỉnh':'GLB mặc định'} • ${handle.clips.length} hoạt ảnh • Kéo để xoay`;
+      const clipsText=handle.clips.length?handle.clips.join(', '):'Không có clip animation';
+      const missing=Object.entries(handle.resolvedActions).filter(([,name])=>!name).map(([name])=>name);
+      status.textContent=`${handle.external?'Model tùy chỉnh':'GLB mặc định'} • ${handle.clips.length} clip • Thiếu ánh xạ: ${missing.length?missing.join(', '):'không'} • Kéo để xoay`;
+      status.title=`Clip trong GLB: ${clipsText}\nKhớp game: ${JSON.stringify(handle.resolvedActions)}`;
+      console.info('[KaraokeVerse Avatar] GLB animation clips:',handle.source,handle.clips);
+      console.info('[KaraokeVerse Avatar] Game action mapping:',handle.resolvedActions);
       const source=document.getElementById('avatar-model-source');
       if(source)source.textContent=`Đang dùng: ${handle.source}${handle.usedFallback?' (model dự phòng)':''}`;
     }catch(error){
@@ -171,8 +176,13 @@ export function createAvatarStudio({getProfile,onChange,toast}){
     const setPose=next=>{
       if(!assetReady)return;
       pose=next;
-      handle.play(next);
-      const mic=model.getObjectByName('Mic');if(mic)mic.visible=pose==='sing';
+      const result=handle.play(next);
+      if(!result.matched){
+        status.textContent=`Chưa có clip ${next.toUpperCase()}. Hãy ánh xạ clip tương ứng trong avatar-catalog.json.`;
+      }else{
+        status.textContent=`Đang phát: ${result.matched} (hành động ${next})`;
+      }
+      const mic=model.getObjectByName('Mic');if(mic)mic.visible=pose==='sing'&&!!result.matched;
       $('avatar-studio-preview-pose').textContent=pose==='dance'?'■ Đứng yên':'▶ Thử nhảy';
     };
     const setView=name=>{

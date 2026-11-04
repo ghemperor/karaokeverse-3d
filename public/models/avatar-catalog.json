@@ -4,13 +4,13 @@
   "defaultHeight": 1.85,
   "models": {
     "player": {
-      "src": "/models/karaoke-avatar.glb",
+      "src": "/models/people/striped-shirt-player.glb",
       "height": 1.85,
       "yawDegrees": 0,
       "originalRig": true
     },
     "dj": {
-      "src": "/models/karaoke-avatar.glb",
+      "src": "/models/people/striped-shirt-player.glb",
       "height": 1.75,
       "yawDegrees": 0,
       "originalRig": true
@@ -22,7 +22,7 @@
       "originalRig": true
     },
     "mai": {
-      "src": "/models/karaoke-avatar.glb",
+      "src": "/models/people/striped-shirt-player.glb",
       "height": 1.74,
       "yawDegrees": 0,
       "originalRig": true
