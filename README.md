@@ -1,3 +1,7 @@
+# KaraokeVerse v1.4.3.1 — Animation Control Hotfix
+
+Xem `HUONG-DAN-SUA-ANIMATION.md` để sửa nhân vật tự phát animation.
+
 # KaraokeVerse 3D v1.4.3 — Professional Avatar Pipeline
 
 Bản này mở khóa **thay thế model avatar hiện tại bằng các model GLB/GLTF/VRM có quyền sử dụng**, cho riêng người chơi và 4 NPC (DJ Luna, Linh, Mai, Vy). Dự án **không tự đi kèm model bên thứ ba**: model mặc định v1.4.2 vẫn được dùng cho đến khi bạn thêm asset mới. Giữ toàn bộ các tính năng KaraokeVerse v1.4.2: YouTube, phòng 3D, micro/WebRTC/TURN, Mixer Pro, Auto-Tune, Party Games, Battle Arena, quà tặng, DJ và nhân viên NPC.

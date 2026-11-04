@@ -1,9 +1,9 @@
 {
   "name": "karaokeverse-3d",
-  "version": "1.4.3",
+  "version": "1.4.3.1",
   "private": true,
   "type": "module",
-  "description": "KaraokeVerse v1.4.3: swappable local licensed GLB/GLTF/VRM avatar pipeline and role-based NPC models",
+  "description": "KaraokeVerse 3D v1.4.3.1 Animation Control: explicit clip mapping; no accidental auto-looping",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
