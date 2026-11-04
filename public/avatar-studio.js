@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {createAvatarLibrary} from './avatar-runtime.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {AVATAR_PALETTES,AVATAR_CHOICES,AVATAR_PRESETS,DEFAULT_AVATAR_PROFILE,normalizeAvatarProfile,profilesEqual} from './avatar-profile.js';
-import {applyAvatarAppearance} from './avatar-materials.js';
+
 
 const $=id=>document.getElementById(id);
 const LABELS={skin:'MÀU DA',hair:'MÀU TÓC',hairStyle:'KIỂU TÓC',expression:'BIỂU CẢM',outfit:'MÀU ÁO',outfitStyle:'KIỂU TRANG PHỤC',pants:'MÀU QUẦN',shoes:'MÀU GIÀY',accessory:'PHỤ KIỆN',build:'DÁNG NGƯỜI'};
@@ -17,6 +17,7 @@ export function createAvatarStudio({getProfile,onChange,toast}){
   const cameraButtons=[...modal.querySelectorAll('[data-avatar-view]')];
   const presetHost=$('avatar-studio-presets');
   let profile=normalizeAvatarProfile(getProfile()),activeTab='face',mounted=null,opening=false;
+  const avatarLibrary=createAvatarLibrary();
   let history=[];
   const sections=new Map(),controlButtons=[],presetButtons=[];
   const persist=()=>{try{localStorage.setItem(P,JSON.stringify(profile));}catch{}onChange(profile);};
@@ -138,25 +139,26 @@ export function createAvatarStudio({getProfile,onChange,toast}){
     }
     const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x10101f,roughness:.9}));ground.rotation.x=-Math.PI/2;ground.position.y=-.17;ground.receiveShadow=true;scene.add(ground);
     const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,1.12,0);orbit.enableDamping=true;orbit.dampingFactor=.075;orbit.enablePan=false;orbit.minDistance=2.1;orbit.maxDistance=6.8;orbit.maxPolarAngle=Math.PI*.64;orbit.update();
-    let model=null,mixer=null,pose='idle',live=false,raf=0,last=performance.now(),actions=new Map(),viewTween=null;
-    let assetReady=false;
+    let model=null,pose='idle',live=false,raf=0,last=performance.now(),viewTween=null;
+    let handle=null,assetReady=false;
     try{
-      const gltf=await new GLTFLoader().loadAsync('/models/karaoke-avatar.glb');
-      model=gltf.scene;model.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(model);
-      mixer=new THREE.AnimationMixer(model);
-      actions=new Map(gltf.animations.map(clip=>[clip.name,mixer.clipAction(clip)]));
-      actions.get('idle')?.play();applyAvatarAppearance(model,profile,THREE);
+      handle=await avatarLibrary.instantiate('player',profile);
+      model=handle.model;
+      handle.group.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+      scene.add(handle.group);
       assetReady=true;host.querySelector('.av-preview-loading')?.remove();
-      status.textContent=`GLB • ${gltf.animations.length} hoạt ảnh • Kéo để xoay nhân vật`;
+      status.textContent=`${handle.external?'Model tùy chỉnh':'GLB mặc định'} • ${handle.clips.length} hoạt ảnh • Kéo để xoay`;
+      const source=document.getElementById('avatar-model-source');
+      if(source)source.textContent=`Đang dùng: ${handle.source}${handle.usedFallback?' (model dự phòng)':''}`;
     }catch(error){
-      console.warn('Avatar Atelier model error',error);
-      status.textContent='Không tải được mô hình GLB. Kiểm tra /models/karaoke-avatar.glb';
+      console.warn('Professional avatar preview error',error);
+      status.textContent='Không tải được avatar. Kiểm tra avatar-catalog.json và thư mục models.';
     }
     const clock=()=>performance.now();
     function tick(){
       if(!live){raf=0;return;}raf=requestAnimationFrame(tick);
       const now=clock(),dt=Math.min(.05,(now-last)/1000);last=now;
-      if(assetReady)mixer.update(dt);
+      if(assetReady)handle.update(dt);
       if(viewTween){
         const t=Math.min(1,(now-viewTween.start)/550),ease=1-Math.pow(1-t,3);
         camera.position.lerpVectors(viewTween.from,viewTween.to,ease);
@@ -167,10 +169,9 @@ export function createAvatarStudio({getProfile,onChange,toast}){
     const resize=()=>{camera.aspect=width()/height();camera.updateProjectionMatrix();renderer.setSize(width(),height());};
     const observer=new ResizeObserver(resize);observer.observe(host);
     const setPose=next=>{
-      if(!assetReady||!actions.has(next))return;
-      const prev=actions.get(pose),act=actions.get(next);
-      if(prev!==act){act.reset().fadeIn(.24).play();prev?.fadeOut(.24);}
+      if(!assetReady)return;
       pose=next;
+      handle.play(next);
       const mic=model.getObjectByName('Mic');if(mic)mic.visible=pose==='sing';
       $('avatar-studio-preview-pose').textContent=pose==='dance'?'■ Đứng yên':'▶ Thử nhảy';
     };
@@ -181,7 +182,7 @@ export function createAvatarStudio({getProfile,onChange,toast}){
       const point={front:new THREE.Vector3(0,1.65,d),side:new THREE.Vector3(d,1.65,0),back:new THREE.Vector3(0,1.65,-d)}[name];
       if(point)viewTween={from:camera.position.clone(),to:point,start:clock()};
     };
-    mounted={apply:p=>{if(model){applyAvatarAppearance(model,p,THREE);const mic=model.getObjectByName('Mic');if(mic)mic.visible=pose==='sing';}},setPose,setView,
+    mounted={apply:p=>{if(handle){handle.apply(p);const mic=model.getObjectByName('Mic');if(mic)mic.visible=pose==='sing';}},setPose,setView,
       resume(){if(live)return;live=true;last=clock();tick();},pause(){live=false;if(raf)cancelAnimationFrame(raf);raf=0;}};
     return mounted;
   }

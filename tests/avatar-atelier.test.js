@@ -58,13 +58,13 @@ test('Atelier mobile UI exposes view controls, expressive preview, wardrobe tabs
  for(const id of ['avatar-studio-modal','avatar-studio-preview','avatar-studio-presets','avatar-studio-pose-select','avatar-studio-random','avatar-studio-undo','avatar-studio-done'])assert.ok(html.includes(`id="${id}"`),id);
  for(const view of ['front','side','back','free'])assert.ok(html.includes(`data-avatar-view="${view}"`));
  assert.ok(css.includes('height:100dvh'));
- assert.ok(js.includes('AVATAR_PRESETS')&&js.includes('history.push')&&js.includes('AnimationMixer'));
+ assert.ok(js.includes('AVATAR_PRESETS')&&js.includes('history.push')&&js.includes('avatarLibrary.instantiate'));
 });
 test('NPC and player 3D actors use the upgraded model with procedural fallback',()=>{
  const scene=read('public/scene.js');
  assert.ok(scene.includes('installNPCGLB'));
- assert.ok(scene.includes('if(avatarAsset)for(const npc'));
+ assert.ok(scene.includes('for(const npc of npcActors.values())installNPCGLB(npc)'));
  assert.ok(scene.includes('d.body.visible=false'));
- assert.ok(scene.includes('group.userData.hips.visible=false'));
- assert.ok(scene.includes('GLB avatar unavailable; using procedural fallback'));
+ assert.ok(scene.includes('d.hips.visible=false'));
+ assert.ok(scene.includes('keeping procedural character'));
 });

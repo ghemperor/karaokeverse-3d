@@ -403,3 +403,6 @@
  .av-tabs .av-tab{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.av-atelier *, .av-atelier *::before,.av-atelier *::after{transition-duration:.01ms!important}}
+
+/* v1.4.3 model provenance and fallback status */
+.avatar-asset-status{font-size:11px;line-height:1.45;color:#bdb1da;margin:6px 12px 12px;overflow-wrap:anywhere;letter-spacing:.01em;}

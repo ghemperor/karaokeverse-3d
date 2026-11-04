@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {createAvatarLibrary} from './avatar-runtime.js';
 import { normalizeAvatarProfile, profilesEqual, AVATAR_PALETTES, AVATAR_EMOTES } from './avatar-profile.js';
 import { applyAvatarAppearance } from './avatar-materials.js';
 import { getSofaSeat, isWalkingPositionBlocked, standFromSofa, SINGING_ARM } from './avatar-interactions.js';
@@ -255,35 +255,31 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     edge(side*6.68,2.47,-2.26,side*6.68,3.77,-2.26,0xbd66ff,.015);
     void shelf;void artwork;
   }
-  // Original, locally bundled GLB with embedded animations. If it cannot load,
-  // legacy procedural avatars remain fully usable rather than disappearing.
-  const glbLoader=new GLTFLoader();
-  let avatarAsset=null;
-  const avatarAssetReady=glbLoader.loadAsync('/models/karaoke-avatar.glb')
-    .then(asset=>{avatarAsset=asset;for(const group of userGroups.values())installAvatarGLB(group);for(const group of npcActors.values())installNPCGLB(group);return true;})
-    .catch(error=>{console.warn('GLB avatar unavailable; using procedural fallback',error);return false;});
-  function installAvatarGLB(group){
-    if(!avatarAsset||group.userData.model||disposed)return;
-    const model=avatarAsset.scene.clone(true);
-    model.name='KaraokeGLB';
-    model.traverse(obj=>{if(obj.isMesh){obj.userData.sharedAvatarGeometry=true;obj.castShadow=true;}});
-    group.add(model);
-    group.userData.model=model;
-    group.userData.mixer=new THREE.AnimationMixer(model);
-    group.userData.actions=new Map(avatarAsset.animations.map(clip=>[clip.name,group.userData.mixer.clipAction(clip)]));
-    group.userData.currentAction=null;
-    group.userData.hips.visible=false;
-    applyAvatarAppearance(model,group.userData.profile,THREE);
-    updateGLBAction(group,'idle');
+  // v1.4.3: model selection lives in /models/avatar-catalog.json.
+  // Load each licensed role model once, clone safe skinned skeletons per character.
+  const avatarLibrary=createAvatarLibrary({onWarning:(...args)=>console.warn('[Avatar Pipeline]',...args)});
+  const avatarAssetReady=avatarLibrary.catalog();
+  async function installAvatarGLB(group){
+    const d=group.userData;
+    if(d.model||d.modelLoading||disposed)return;
+    d.modelLoading=true;
+    try{
+      const handle=await avatarLibrary.instantiate('player',d.profile);
+      if(disposed||!group.parent){handle.dispose();return;}
+      group.add(handle.group);
+      d.model=handle.model;
+      d.modelHandle=handle;
+      d.mixer=handle.mixer;
+      d.currentAction=null;
+      d.hips.visible=false;
+      updateGLBAction(group,'idle');
+    }catch(error){console.warn('Avatar model unavailable; keeping procedural character',error);}
+    finally{d.modelLoading=false;}
   }
   function updateGLBAction(group,clipName){
     const d=group.userData;
-    if(!d.model||d.currentAction===clipName)return;
-    const next=d.actions.get(clipName)||d.actions.get('idle');
-    if(!next)return;
-    const prev=d.actions.get(d.currentAction);
-    next.reset().setLoop(THREE.LoopRepeat,Infinity).fadeIn(.2).play();
-    if(prev&&prev!==next)prev.fadeOut(.2);
+    if(!d.modelHandle||d.currentAction===clipName)return;
+    d.modelHandle.play(clipName);
     d.currentAction=clipName;
   }
   function applyAvatarProfile(id,profile){
@@ -293,7 +289,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     const safe=normalizeAvatarProfile(profile);
     if(profilesEqual(d.profile,safe))return true;
     d.profile=safe;
-    if(d.model)applyAvatarAppearance(d.model,safe,THREE);
+    if(d.modelHandle)d.modelHandle.apply(safe);
     else{
       d.cloth.color.setHex(AVATAR_PALETTES.outfit[safe.outfit]);
       d.skin.color.setHex(AVATAR_PALETTES.skin[safe.skin]);
@@ -382,37 +378,38 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
       active:true,status:'idle',walkAmount:0};
     npcActors.set(id,root);
   }
-  // v1.4.2: give the DJ and service NPCs the same premium GLB rig as players.
-  // Original procedural NPCs remain available as a fail-safe when GLB loading fails.
+  // NPCs use independently configured assets: dj / linh / mai / vy.
+  // The legacy figures remain when a licensed model is not available.
   const NPC_FASHION={
     dj:{skin:'warm',hair:'plum',outfit:'violet',pants:'black',shoes:'white',hairStyle:'long',outfitStyle:'jacket',accessory:'headphones',expression:'joy'},
     linh:{skin:'golden',hair:'chocolate',outfit:'sky',pants:'navy',shoes:'white',hairStyle:'ponytail',outfitStyle:'formal',accessory:'none',expression:'smile'},
     mai:{skin:'porcelain',hair:'copper',outfit:'rose',pants:'charcoal',shoes:'white',hairStyle:'bangs',outfitStyle:'jacket',accessory:'necklace',expression:'smile'},
     vy:{skin:'bronze',hair:'ink',outfit:'mint',pants:'denim',shoes:'black',hairStyle:'curly',outfitStyle:'tee',accessory:'none',expression:'joy'},
   };
-  function installNPCGLB(group){
-    if(!avatarAsset||!group?.userData||group.userData.npcModel||disposed)return;
+  async function installNPCGLB(group){
+    if(!group?.userData||group.userData.npcModel||group.userData.npcLoading||disposed)return;
     const d=group.userData;
-    const model=avatarAsset.scene.clone(true);model.name=`NPC_GLB_${d.id}`;
-    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.userData.sharedAvatarGeometry=true;}});
-    group.add(model);
-    applyAvatarAppearance(model,NPC_FASHION[d.id]||{},THREE);
-    model.scale.multiplyScalar(.91);
-    d.npcModel=model;d.npcMixer=new THREE.AnimationMixer(model);
-    d.npcActions=new Map(avatarAsset.animations.map(clip=>[clip.name,d.npcMixer.clipAction(clip)]));
-    d.npcAction=null;
-    d.body.visible=false;
-    const hit=model.getObjectByName('OutfitBody');
-    if(hit){register(hit,'npc',`${d.id==='dj'?'🎧 DJ':'🍹 Nhân viên'} ${d.name}`,{npcId:d.id});d.hit=hit;}
+    d.npcLoading=true;
+    try{
+      const handle=await avatarLibrary.instantiate(d.id,NPC_FASHION[d.id]||{});
+      if(disposed||!group.parent){handle.dispose();return;}
+      group.add(handle.group);
+      d.npcModel=handle.model;d.npcHandle=handle;d.npcMixer=handle.mixer;
+      d.npcAction=null;
+      d.body.visible=false;
+      // An invisible physical interaction collider works for ANY imported mesh naming.
+      const hit=new THREE.Mesh(new THREE.CylinderGeometry(.39,.39,1.72,12),
+        new THREE.MeshBasicMaterial({transparent:true,opacity:.001,depthWrite:false}));
+      hit.position.y=.89;group.add(hit);
+      register(hit,'npc',`${d.id==='dj'?'🎧 DJ':'🍹 Nhân viên'} ${d.name}`,{npcId:d.id});
+      d.hit=hit;
+    }catch(error){console.warn(`NPC ${d.id} model not available`,error);}
+    finally{d.npcLoading=false;}
   }
   function animateNPCGLB(group,name,dt){
-    const d=group.userData;if(!d.npcModel)return;
-    if(d.npcAction!==name){
-      const next=d.npcActions.get(name)||d.npcActions.get('idle');
-      const prev=d.npcActions.get(d.npcAction);
-      if(next){next.reset().fadeIn(.22).play();if(prev&&prev!==next)prev.fadeOut(.22);d.npcAction=name;}
-    }
-    d.npcMixer?.update(dt);
+    const d=group.userData;if(!d.npcHandle)return;
+    if(d.npcAction!==name){d.npcHandle.play(name);d.npcAction=name;}
+    d.npcHandle.update(dt);
   }
   // DJ workstation is separate from YouTube playback; it is a visual/party animation only.
   const djDesk=new THREE.Mesh(new THREE.BoxGeometry(1.75,.76,.66),basicMat(0x3d285b,{metalness:.65,roughness:.3}));
@@ -427,7 +424,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   createNPCActor('linh','Linh',{outfit:0x4a83b8,hair:0x362036});
   createNPCActor('mai','Mai',{outfit:0x9b4e83,hair:0x402b24});
   createNPCActor('vy','Vy',{outfit:0x538b81,hair:0x593a24});
-  if(avatarAsset)for(const npc of npcActors.values())installNPCGLB(npc);
+  for(const npc of npcActors.values())installNPCGLB(npc);
   function setNPCState(state){
     if(!state)return;
     const members=[state.dj,...(state.staff||[])];
@@ -525,7 +522,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     for(const [id,g] of userGroups){
       if(!usersById.has(id)){
         scene.remove(g);
-        g.userData.mixer?.stopAllAction();
+        g.userData.modelHandle?.dispose();
         g.traverse(obj=>{if(obj.geometry&&!obj.userData.sharedAvatarGeometry)obj.geometry.dispose();if(obj.material){if(!obj.userData.sharedAvatarGeometry)obj.material.map?.dispose?.();obj.material.dispose?.()}});
         userGroups.delete(id);
       }
@@ -990,7 +987,7 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
         updateGLBAction(g,selected);
         const micNode=d.model.getObjectByName('Mic');
         if(micNode)micNode.visible=sing;
-        d.mixer.update(dt);
+        d.modelHandle.update(dt);
         // Non-keyframed facial micro-animations; every avatar blinks on a different cycle.
         const blinkPhase=(t+d.seed*1.83)%4.7;
         const blink=blinkPhase<.13?Math.max(.13,Math.abs(blinkPhase-.065)/.065):1;
@@ -1070,6 +1067,8 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     for(const [button,down,up] of padBindings){button.removeEventListener('pointerdown',down);button.removeEventListener('pointerup',up);button.removeEventListener('pointercancel',up);}
     for(const fx of giftEffects)dropGiftEffect(fx);giftEffects.length=0;
     for(const tex of giftTextures.values())tex.dispose();giftTextures.clear();
+    for(const g of userGroups.values())g.userData.modelHandle?.dispose();
+    for(const g of npcActors.values())g.userData.npcHandle?.dispose();
     controls.dispose();renderer.dispose();
     scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){obj.material.map?.dispose?.();obj.material.dispose?.()}});
     webglContainer.replaceChildren();cssContainer.replaceChildren();

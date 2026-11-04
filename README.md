@@ -1,68 +1,87 @@
-# KaraokeVerse 3D v1.4.2 — AVATAR ATELIER
+# KaraokeVerse 3D v1.4.3 — Professional Avatar Pipeline
 
-Đây là bản **nâng cấp toàn diện nhân vật / Avatar Studio** từ v1.4.1 Private Party Lounge, phục vụ nhóm bạn riêng tư. Không thay đổi các cơ chế YouTube, phòng, WebRTC/TURN, Mixer Pro, Auto-Tune, Battle, Party Games, quà tặng, DJ và nhân viên NPC.
+Bản này mở khóa **thay thế model avatar hiện tại bằng các model GLB/GLTF/VRM có quyền sử dụng**, cho riêng người chơi và 4 NPC (DJ Luna, Linh, Mai, Vy). Dự án **không tự đi kèm model bên thứ ba**: model mặc định v1.4.2 vẫn được dùng cho đến khi bạn thêm asset mới. Giữ toàn bộ các tính năng KaraokeVerse v1.4.2: YouTube, phòng 3D, micro/WebRTC/TURN, Mixer Pro, Auto-Tune, Party Games, Battle Arena, quà tặng, DJ và nhân viên NPC.
 
-## Bản phát hành này có gì mới?
+## Điểm mới
 
-### 1. Model avatar GLB được dựng lại
-
-- Asset gốc `public/models/karaoke-avatar.glb` được tạo bằng **script đi kèm**, không tải model thương mại hay asset có vấn đề bản quyền.
-- **111 nodes và 12 animation clips** trong GLB; khoảng 70 KB; mô hình stylized mới với mặt, iris, pupils, catchlights, má, lông mày, biểu cảm miệng; chi tiết tóc, áo khoác, áo hoodie, áo thun, áo thanh lịch, viền áo, cúc, đồng hồ, giày/dây giày và micro.
-- Khớp vai/khuỷu tay cho animation hát, đi, ngồi, nhảy, vẫy tay, vỗ tay, cổ vũ, cúi chào, thả tim, tạo dáng.
-- Chớp mắt và hoạt họa miệng nhẹ trong phòng karaoke, giữ nguyên tỷ lệ mesh.
-- DJ Luna và Linh/Mai/Vy sử dụng cùng rig GLB được cá nhân hóa; giữ model procedural làm phương án dự phòng khi tải GLB thất bại.
-- Model **stylized** chứ không phải photorealistic, chưa sử dụng skinning mocap hoặc đồ họa AAA.
-
-### 2. Avatar Studio mới
-
-- Trình xem 3D có ánh sáng studio, sàn trình diễn, có thể xoay 360° và xem **chính diện / nghiêng / phía sau / xoay tự do**.
-- Chọn thử **11 hành động** trực tiếp trong preview (gồm cầm mic hát và ngồi).
-- **4 preset**: Pop Star, Chill Night, VIP Lounge, Retro Beat; chức năng randomize, undo, reset.
-- Tùy chỉnh **7 màu da, 9 màu tóc, 9 màu áo, 6 màu quần, 5 màu giày**, 5 kiểu tóc, 5 loại phụ kiện, 4 kiểu trang phục, 3 dáng người, 3 biểu cảm.
-- UI chia tab Khuôn mặt & tóc / Trang phục / Phụ kiện. Trên mobile hiển thị dạng màn hình toàn phần, cuộn được toàn bộ thiết lập và chân trang giữ nút Lưu.
-- Lựa chọn lưu `localStorage` và gửi sang Socket.IO khi ở trong phòng như trước.
-
-### 3. Giữ tương thích
-
-Không thay đổi tên các clip animation cũ hoặc đường dẫn GLB; profile cũ được nâng lên schema v1.4.2 với các mục mới lấy mặc định an toàn. Bộ dựng không đòi database, API key mới hay cấu hình Render mới.
+- Catalog tập trung: `public/models/avatar-catalog.json`. Mỗi vai trò có file model riêng, thay file không cần sửa `scene.js`.
+- Nạp `.glb`, `.gltf`, `.vrm` dựa trên GLTFLoader của Three.js. **VRM được nạp ở cấp dữ liệu glTF; chưa có đủ bộ runtime đặc trưng VRM** như spring bones/look-at/expression schema. Model VRM cần kiểm thử trước khi dùng.
+- Tải model được cache; dùng `SkeletonUtils.clone` để clone an toàn model có `SkinnedMesh` và xương cho nhiều người.
+- Với model tùy chỉnh, tự chỉnh chiều cao và vị trí đặt chân xuống sàn; điều chỉnh hướng quay qua `yawDegrees`. Không đổi vị trí multiplayer.
+- Ánh xạ tên clip animation (`Idle`, `Walk`, `Sing`, `Dance`, ...), fade giữa các clip. Rig có xương nhưng **không có animation clip** được dùng tư thế chuyển động đơn giản để tránh nhân vật bất động. Đây không phải retarget animation chuẩn cho mọi rig khác nhau.
+- Gắn micro cơ bản vào xương bàn tay phải nếu model không có object tên `Mic`. Nếu model có sẵn micro thì giữ nguyên.
+- Các tùy chỉnh màu có thể áp dụng cho model bên ngoài bằng `materialBindings`. Phong cách tóc/trang phục **chỉ tự động thay shape** với model mặc định có đúng các node tương thích. Model mới cần tự chuẩn bị morphs/variants nếu muốn tùy chỉnh đầy đủ.
+- Tách asset DJ và nhân viên; collider tương tác NPC độc lập với tên mesh nên tương tác vẫn dùng được trên model mới.
+- Avatar Studio xem đúng model player từ catalog; hiển thị đường dẫn asset đang dùng. Khi file thiếu/lỗi, fallback sang model mặc định.
 
 ## Chạy trên Windows
 
-1. Cài Node.js 22 và có kết nối Internet (để tải dependencies + Three.js từ CDN).
-2. Giải nén toàn bộ thư mục, chạy `CHAY-TREN-WINDOWS.bat`.
-3. Truy cập `http://localhost:3002` (cổng mặc định). Nếu trùng port, mở CMD tại thư mục và chạy `CHAY-TREN-WINDOWS.bat 3003`.
-4. Vào Avatar Studio từ màn hình chào hoặc nút `Avatar` trong phòng.
+1. Giải nén toàn bộ thư mục, cài Node.js 20 trở lên (khuyên dùng Node 22).
+2. Chạy `CHAY-TREN-WINDOWS.bat` và mở `http://localhost:3002`.
+3. Muốn dùng cổng khác, mở CMD trong thư mục và chạy `CHAY-TREN-WINDOWS.bat 3003`.
+4. Mở Avatar Studio, thử chọn animation Hát, Ngồi, Nhảy, Vẫy tay và xem model 360°.
 
-macOS/Linux: chạy `npm install && PORT=3002 npm start`.
+## Thay model GLB chuyên nghiệp — 5 phút
 
-## Kiểm thử mã nguồn
+**Bước 1.** Chuẩn bị model bạn được phép sử dụng. Khuyên dùng **GLB** một file đã embed texture, ở dạng đứng, có mặt và tay/chân, tốt nhất có clip `Idle`, `Walk`, `Sing`, `Sit` và `Dance`. Nếu chỉ có nhân vật không animation, game sẽ có chuyển động xương đơn giản nếu nhận diện được rig. Chuyển động chuyên nghiệp cần model có animation chất lượng hoặc retarget trước trong Blender.
 
-`npm run check` hoặc `node --test tests/*.test.js`.
+**Bước 2.** Đặt file vào `public/models/people/`, ví dụ:
 
-Tại thời điểm đóng gói: **74/74 tests Node đạt**; GLB đọc được dưới dạng glTF scene độc lập; kiểm tra CSS layout ở 360, 390, 768 và 1280 px không tràn ngang, nút lưu trong vùng nhìn thấy.
+```text
+public/
+  models/
+    avatar-catalog.json
+    karaoke-avatar.glb            # model cũ fallback
+    people/
+      player.glb                  # người chơi
+      dj.glb                      # DJ Luna
+      linh.glb                    # NPC Linh
+      mai.glb                     # NPC Mai
+      vy.glb                      # NPC Vy
+```
 
-**Giới hạn chưa kiểm chứng:** Model GLB không được render với Three.js trong phiên thử Chromium không có thư viện CDN, do đó ngoại hình/animation thực tế cần chạy thử ở Chrome/Edge có Internet. Chưa kiểm chứng đa thiết bị WebRTC và NPC animation thực tế trên Render sau bản nâng cấp. Kiểm thử code không thay thế kiểm thử game trên thiết bị thật.
+**Bước 3.** Sửa đường dẫn từng người trong `public/models/avatar-catalog.json`:
 
-## Kiểm tra sau khi chạy
+```json
+{
+  "version": 1,
+  "models": {
+    "player": {"src":"/models/people/player.glb", "height":1.85, "yawDegrees":0,
+      "materialBindings":{"hair":["Hair"],"skin":["Skin"],"outfit":["Outfit"]}},
+    "dj": {"src":"/models/people/dj.glb", "height":1.75, "yawDegrees":180},
+    "linh": {"src":"/models/people/linh.glb", "height":1.74, "yawDegrees":0},
+    "mai": {"src":"/models/people/mai.glb", "height":1.74, "yawDegrees":0},
+    "vy": {"src":"/models/people/vy.glb", "height":1.74, "yawDegrees":0}
+  }
+}
+```
 
-1. Mở Avatar Studio: thử chọn kiểu tóc ngắn, dài, buộc, xoăn và mũ; đảm bảo không có nhiều tóc trùng nhau.
-2. Chọn 4 preset; dùng Undo; thử chọn khuôn mặt, biểu cảm, trang phục, phụ kiện.
-3. Chọn **Cầm micro & hát** trong preview; xem tư thế khuỷu tay, vị trí micro.
-4. Vào phòng 2 trình duyệt; thay đổi nhân vật A và xác nhận B thấy đúng màu tóc/quần áo, đồng thời thử vỗ tay và ngồi/đứng.
-5. Gọi Linh/Mai/Vy đến bàn; thử DJ và cử động NPC; tương tác vẫn hoạt động.
-6. Dùng điện thoại 360–390 px, kiểm tra tabs, xem trước, điều khiển camera và nút **Lưu nhân vật**.
-7. Thử YouTube, microphone, mixer, Auto-Tune, Echo, party/vote để phát hiện hồi quy.
+Đây là cấu hình minh họa: bạn có thể **chỉ sửa thuộc tính `src`, `height`, `yawDegrees` và `materialBindings` của file catalog có sẵn**, giữ nguyên phần `animationAliases`. Không cần viết lại toàn bộ JSON. `materialBindings` chỉ ánh xạ *tên material chính xác trong model* sang màu trong Avatar Studio; nếu không biết tên thì bỏ qua thuộc tính này để giữ nguyên texture và màu gốc của model.
 
-## File chính
+**Bước 4.** Chạy lại game, làm mới trang (`Ctrl + Shift + R`) và mở Avatar Studio. Nếu ghi “(model dự phòng)” thì đường dẫn/định dạng asset mới bị lỗi. Mở F12 → Console và Network để xem HTTP 404 hoặc lỗi parser GLB.
 
-- `scripts/build-avatar-glb.py`: script tái tạo asset gốc (cần `pip install trimesh numpy` nếu muốn tự build).
-- `public/models/karaoke-avatar.glb`: asset 3D tự chứa không tải texture ngoài.
-- `public/avatar-profile.js`: schema ngoại hình với giá trị cho phép.
-- `public/avatar-materials.js`: áp dụng màu và bật/tắt các phần tóc / quần áo / biểu cảm.
-- `public/avatar-studio.js`: preview 3D, preset, undo, responsive interactions.
-- `public/scene.js`: dùng avatar GLB cho người chơi và NPC.
-- `public/index.html`, `public/style.css`: giao diện Avatar Atelier.
+**Bước 5.** Đăng nhập từ hai thiết bị, kiểm tra nhân vật đồng bộ vị trí, ngồi dậy cạnh sofa, hát cầm mic, DJ/nhân viên đi và tương tác. Khi dùng 2 thiết bị khác mạng, kiểm tra cả voice chat riêng; thay model không sửa cấu hình TURN.
 
-## An toàn & vận hành
+## Chuẩn model đề xuất
 
-Không đưa TURN credentials vào repo. Các biến TURN đang lưu trên Render giữ nguyên khi deploy. Do dịch vụ hiện tại trả TURN credentials qua `/config`, nên đổi sang TURN credential ngắn hạn trước khi công khai website. Nếu chỉ dùng với vài bạn bè, vẫn cần giới hạn truy cập hợp lý.
+- GLB/GLTF có license phù hợp, không dùng asset bị sao chép trái phép; lưu bản license theo từng model.
+- Hạn chế model nặng trên mobile: ưu tiên khoảng 15–35k triangles/avatar, texture 1K–2K, dưới 10 MB/model nếu có thể.
+- Chỉ số `height` tính bằng mét chiều cao muốn hiển thị; `yawDegrees=180` nếu nhân vật quay ngược.
+- Tên animation có thể ánh xạ từ `animationAliases` trong catalog, ví dụ `Walk`/`Walking`/`Mixamo_Walk`. Nếu file chứa animation cho rig khác, cần retarget vào rig mới bằng Blender hoặc phần mềm hỗ trợ trước khi xuất GLB.
+- Nếu model không có skeleton, chỉ có thể đứng/di chuyển theo nhóm; không thể có động tác gập tay/hát chuyên nghiệp nếu chưa rig.
+- `.gltf` có file `.bin` và texture bên ngoài phải upload đủ đường dẫn tương đối. `.glb` được ưu tiên để deploy dễ hơn.
+- `.vrm` có thể hiện mesh nhưng bộ điều khiển VRM chuyên dụng chưa tích hợp; các biểu cảm VRM, hair physics và animation đặc thù có thể chưa chạy đúng.
+
+## Test & deploy
+
+Chạy `npm run check`. Sau đó cập nhật đúng file trong ZIP **GitHub-Update** vào repository, không xóa thư mục `lib` hay file cũ. Nếu đã cấu hình TURN trên Render, giữ nguyên ba biến `TURN_URL`, `TURN_USERNAME`, `TURN_PASSWORD`.
+
+Để nâng cấp model sau này: upload file GLB mới vào GitHub `public/models/people/` và sửa đường dẫn `src` trong catalog. Render sẽ tự deploy khi Auto Deploy bật.
+
+### Giới hạn kiểm thử
+
+Bộ kiểm thử Node kiểm tra logic, cú pháp, catalog, file GLB mặc định và tính tương thích mã cũ. **Chưa được kiểm thử trực quan mọi GLB/VRM bên ngoài, animation thực tế và nhiều người đồng thời trên Render**. Chưa cung cấp file model thương mại chất lượng cao; pipeline mới là nền tảng để thay bằng model có quyền sử dụng.
+
+### Bảo mật
+
+Đường dẫn model chỉ nhận file cục bộ dưới `/models/` và không cho client chuyển URL tùy ý. Không commit credential TURN lên GitHub. Render đã bật TURN nên `/config` có thể làm lộ credential dài hạn; về lâu dài hãy dùng credential ngắn hạn.

@@ -48,6 +48,6 @@ test('Avatar multiplayer and camera control are connected end to end',()=>{
  const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
  for(const phrase of ["socket.on('avatar:update'", "io.to(room.code).emit('user:avatar'",'normalizeAvatarProfile(details.avatarProfile)'])assert.ok(server.includes(phrase),phrase);
  for(const phrase of ["socket.on('user:avatar'", "emitAck('avatar:update'",'createAvatarStudio'])assert.ok(app.includes(phrase),phrase);
- for(const phrase of ["loadAsync('/models/karaoke-avatar.glb')",'AnimationMixer','selectedView===\'cinematic\''])assert.ok(scene.includes(phrase),phrase);
+ for(const phrase of ['avatarLibrary.instantiate','modelHandle.update','selectedView===\'cinematic\''])assert.ok(scene.includes(phrase),phrase);
  for(const id of ['avatar-studio-modal','avatar-edit-room','avatar-edit-welcome','avatar-studio-preview','data-view="cinematic"'])assert.ok(html.includes(id),id);
 });

@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "description": "Replace local model paths with your licensed GLB/GLTF/VRM files. No third-party assets included.",
+  "defaultHeight": 1.85,
+  "models": {
+    "player": {
+      "src": "/models/karaoke-avatar.glb",
+      "height": 1.85,
+      "yawDegrees": 0,
+      "originalRig": true
+    },
+    "dj": {
+      "src": "/models/karaoke-avatar.glb",
+      "height": 1.75,
+      "yawDegrees": 0,
+      "originalRig": true
+    },
+    "linh": {
+      "src": "/models/karaoke-avatar.glb",
+      "height": 1.74,
+      "yawDegrees": 0,
+      "originalRig": true
+    },
+    "mai": {
+      "src": "/models/karaoke-avatar.glb",
+      "height": 1.74,
+      "yawDegrees": 0,
+      "originalRig": true
+    },
+    "vy": {
+      "src": "/models/karaoke-avatar.glb",
+      "height": 1.74,
+      "yawDegrees": 0,
+      "originalRig": true
+    }
+  },
+  "fallback": "/models/karaoke-avatar.glb",
+  "animationAliases": {
+    "idle": [
+      "idle",
+      "Idle",
+      "Breathing"
+    ],
+    "walk": [
+      "walk",
+      "Walk",
+      "Walking",
+      "Walking_Female"
+    ],
+    "run": [
+      "run",
+      "Run",
+      "Running"
+    ],
+    "sit": [
+      "sit",
+      "Sit",
+      "Sitting"
+    ],
+    "sing": [
+      "sing",
+      "Sing",
+      "Singing"
+    ],
+    "dance": [
+      "dance",
+      "Dance",
+      "Dancing"
+    ],
+    "wave": [
+      "wave",
+      "Wave",
+      "Waving"
+    ],
+    "clap": [
+      "clap",
+      "Clap",
+      "Clapping"
+    ],
+    "cheer": [
+      "cheer",
+      "Cheer"
+    ],
+    "bow": [
+      "bow",
+      "Bow"
+    ],
+    "heart": [
+      "heart",
+      "Heart"
+    ],
+    "pose": [
+      "pose",
+      "Pose",
+      "Standing"
+    ]
+  }
+}
