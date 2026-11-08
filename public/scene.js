@@ -6,6 +6,7 @@ import { normalizeAvatarProfile, profilesEqual, AVATAR_PALETTES, AVATAR_EMOTES }
 import { applyAvatarAppearance } from './avatar-materials.js';
 import { getSofaSeat, isWalkingPositionBlocked, standFromSofa, SINGING_ARM } from './avatar-interactions.js';
 import { GIFT_BY_ID } from './gift-data.js';
+import { renderPixelRatio, createAdaptiveQuality } from './render-quality.js';
 
 const COLORS = [0xc67afe, 0x70d4ff, 0xff78c8, 0xffd178, 0x83eabb, 0xff8484, 0xa4abff, 0xe9c3ff];
 const VIEWS = {
@@ -24,8 +25,21 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   const camera = new THREE.PerspectiveCamera(48, width() / height(), 0.1, 80);
   camera.position.set(...VIEWS.front.position);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,Math.min(window.innerWidth,window.innerHeight)<700?1.3:1.7));
-  renderer.setSize(width(), height());
+  const stageElement = webglContainer.closest('.stage-scene');
+  const mobileDevice = matchMedia('(pointer:coarse)').matches || Math.min(window.innerWidth, window.innerHeight) < 690;
+  const adaptiveQuality = createAdaptiveQuality();
+  let qualityMode = 'auto';
+  let currentPixelRatio = 0;
+  const isStageFullscreen = () => Boolean(stageElement && document.fullscreenElement === stageElement);
+  function applyRenderResolution() {
+    const multiplier = qualityMode === 'smooth' ? 0.75 : qualityMode === 'sharp' ? 1 : adaptiveQuality.scale;
+    const ratio = renderPixelRatio({width:width(), height:height(), devicePixelRatio:window.devicePixelRatio || 1,
+      fullscreen:isStageFullscreen(), mobile:mobileDevice, scale:multiplier, mode:qualityMode});
+    if (ratio !== currentPixelRatio) { renderer.setPixelRatio(ratio); currentPixelRatio = ratio; }
+    // false avoids forcing CSS sizing repeatedly on every adaptive quality update.
+    renderer.setSize(width(), height(), false);
+  }
+  applyRenderResolution();
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.9;
@@ -892,6 +906,11 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
   function animate(){
     if(disposed)return;
     raf=requestAnimationFrame(animate);
+    const qualitySample = adaptiveQuality.sample(performance.now());
+    if (qualitySample) {
+      if (qualityMode === 'auto' && qualitySample.changed) applyRenderResolution();
+      callbacks.onRenderPerformance?.({fps:qualitySample.fps, pixelRatio:currentPixelRatio, mode:qualityMode});
+    }
     const dt=Math.min(movementClock.getDelta(),.05);
     const t=movementClock.elapsedTime;
     if(isDiscoOn){disc.rotation.y=t*.45;disc.rotation.z=t*.17;discRing.rotation.z=t*.11;}
@@ -1048,15 +1067,30 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     renderer.render(scene,camera);cssRenderer.render(cssScene,camera);
   }
   animate();
+  function setQualityMode(mode) {
+    if (!['auto','smooth','sharp'].includes(mode)) return;
+    qualityMode = mode;
+    adaptiveQuality.reset({restoreScale:true});
+    applyRenderResolution();
+    callbacks.onRenderPerformance?.({fps:null, pixelRatio:currentPixelRatio, mode:qualityMode});
+  }
   function resize(){
     if(disposed)return;
     camera.aspect=width()/height();camera.updateProjectionMatrix();
-    renderer.setSize(width(),height());cssRenderer.setSize(width(),height());
+    applyRenderResolution();
+    cssRenderer.setSize(width(),height());
+  }
+  function onFullscreenChange() {
+    // Fullscreen changes pixel budget even on displays whose CSS resize fires late.
+    adaptiveQuality.reset({restoreScale:true});
+    resize();
+    requestAnimationFrame(() => { if (!disposed) resize(); });
   }
   const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(webglContainer);
   window.addEventListener('resize',resize);
+  document.addEventListener('fullscreenchange',onFullscreenChange);
   function dispose(){
-    disposed=true;cancelAnimationFrame(raf);resizeObserver.disconnect();window.removeEventListener('resize',resize);
+    disposed=true;cancelAnimationFrame(raf);resizeObserver.disconnect();window.removeEventListener('resize',resize);document.removeEventListener('fullscreenchange',onFullscreenChange);
     renderer.domElement.removeEventListener('pointerdown',onAnyPointerDown);
     renderer.domElement.removeEventListener('pointerdown',onPointerDown);
     renderer.domElement.removeEventListener('pointermove',onPointerMove);
@@ -1073,5 +1107,5 @@ export function initScene(webglContainer, cssContainer, callbacks = {}) {
     scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){obj.material.map?.dispose?.();obj.material.dispose?.()}});
     webglContainer.replaceChildren();cssContainer.replaceChildren();
   }
-  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,applyAvatarProfile,setView,setEmote,setPerformance,setWorldState,setBattleState,setNPCState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,dispose};
+  return {playerElement,tvPlaceholder,setMembers,setLocalUser,applyMemberMove,applyAvatarProfile,setView,setEmote,setPerformance,setWorldState,setBattleState,setNPCState,goStage,playReaction,playGift,playVictory,playBattleVictory,interactLooking,getView:()=>selectedView,setQualityMode,dispose};
 }

@@ -414,3 +414,9 @@
 /* Video unlock must not overlap the new camera control. */
 .video-unlock{top:57px;right:13px}
 @media(max-width:690px){.scene-next-view{right:60px;padding:8px 9px;min-height:35px}.scene-next-view span{display:none}.scene-next-view kbd{font-size:10px}.video-unlock{top:58px;right:13px}}
+
+/* v1.4.3.3 - fullscreen adaptive render controls. Kept inside fullscreen element. */
+.scene-render-quality{position:absolute;right:13px;top:98px;z-index:14;padding:7px 10px;border-radius:9px;border:1px solid #8c7dc680;background:#17112bc9;color:#f2edff;font-size:11px;font-weight:800;min-height:32px;backdrop-filter:blur(5px);touch-action:manipulation}
+.scene-render-quality:hover,.scene-render-quality:focus-visible{background:#46305c;outline:2px solid #bc9bf2;outline-offset:1px}
+.scene-render-quality #scene-fps{font-size:10px;font-weight:600;color:#b5e8cd;margin-left:5px}
+@media(max-width:690px){.scene-render-quality{top:99px;right:10px;padding:6px 8px;font-size:10px}}

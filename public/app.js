@@ -915,6 +915,22 @@ async function toggleStageFullscreen(){
     else await stage.requestFullscreen();
   }catch{toast('Trình duyệt không hỗ trợ hoặc chưa cho phép toàn màn hình.');}
 }
+const renderModes = ['auto','smooth','sharp'];
+const renderModeLabels = {auto:'Auto',smooth:'Mượt',sharp:'Sắc nét'};
+let activeRenderMode = 'auto';
+let lastRenderFps = null;
+function updateRenderQualityButton() {
+  const qualityButton = $('scene-quality');
+  qualityButton.querySelector('#scene-fps').textContent = lastRenderFps == null ? '' : `· ${lastRenderFps} FPS`;
+  qualityButton.firstChild.textContent = `⚡ ${renderModeLabels[activeRenderMode]} `;
+  qualityButton.setAttribute('aria-label',`Chất lượng: ${renderModeLabels[activeRenderMode]}. Bấm để chuyển`);
+}
+$('scene-quality').addEventListener('click',()=>{
+  activeRenderMode = renderModes[(renderModes.indexOf(activeRenderMode)+1) % renderModes.length];
+  lastRenderFps = null;
+  state.scene?.setQualityMode(activeRenderMode);
+  updateRenderQualityButton();
+});
 $('scene-fullscreen').addEventListener('click',toggleStageFullscreen);
 document.addEventListener('fullscreenchange',()=>{
   $('scene-fullscreen').innerHTML=document.fullscreenElement?'⛶ <span>Thu nhỏ</span>':'⛶ <span>Toàn màn hình</span>';
@@ -984,6 +1000,11 @@ setInterval(()=>{
   try{
     const {initScene}=await import('/scene.js');
     state.scene=initScene($('scene-webgl'),$('scene-css3d'),{
+      onRenderPerformance:({fps,mode}) => {
+        if(mode !== activeRenderMode || fps == null) return;
+        lastRenderFps = fps;
+        updateRenderQualityButton();
+      },
       onMove:(pos)=>{if(state.room&&socket.connected)socket.emit('user:move',pos);},
       onViewChange:(view)=>{
         const label = CAMERA_VIEW_LABELS[view] || CAMERA_VIEW_LABELS.front;
@@ -1018,6 +1039,7 @@ setInterval(()=>{
         toast(messages[type]||'Đã tương tác với đồ vật.');
       },
     });
+    if(activeRenderMode !== 'auto') state.scene?.setQualityMode(activeRenderMode);
     if(state.myId){state.scene.setLocalUser(state.myId);state.scene.applyAvatarProfile(state.myId,state.avatarProfile);}
     if(state.room){state.scene.setMembers(state.room.users);state.scene.setWorldState(state.room.world);state.scene.setPerformance(state.room.performance?.singerId);state.scene.setBattleState(state.room.battle);state.scene.setNPCState(state.room.npcs);}
     if(state.room)ensureYoutube();

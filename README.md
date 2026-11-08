@@ -1,3 +1,13 @@
+# KaraokeVerse v1.4.3.2 — View Hotkey & Fullscreen Camera Switch
+
+**Mới:** Nhấn **V** để lần lượt chuyển qua 7 góc nhìn sẵn có: Sân khấu → Toàn phòng → Xoay 360° → Góc mắt → Theo nhân vật → Xem TV → Cinematic → Sân khấu. Nhấn **Shift+V** để quay về góc trước, **F** để bật/tắt fullscreen. Trong fullscreen, bấm nút **V** ngay trên khung 3D nếu dùng cảm ứng hoặc khi video YouTube đang giữ focus. Phím V không kích hoạt khi đang nhập chat, URL bài hát, hoặc mở hộp thoại.
+
+Không thay đổi hệ thống avatar, các clip GLB, cấu hình TURN, YouTube, voice chat hay Party Games. **Gói GitHub Update không chứa avatar-catalog.json hay GLB**, nên giữ được model tự thêm gần đây của bạn.
+
+[Hướng dẫn chi tiết](HUONG-DAN-PHIM-V.md).
+
+---
+
 # KaraokeVerse v1.4.3.1 — Animation Control Hotfix
 
 Xem `HUONG-DAN-SUA-ANIMATION.md` để sửa nhân vật tự phát animation.
@@ -89,3 +99,18 @@ Bộ kiểm thử Node kiểm tra logic, cú pháp, catalog, file GLB mặc đ�
 ### Bảo mật
 
 Đường dẫn model chỉ nhận file cục bộ dưới `/models/` và không cho client chuyển URL tùy ý. Không commit credential TURN lên GitHub. Render đã bật TURN nên `/config` có thể làm lộ credential dài hạn; về lâu dài hãy dùng credential ngắn hạn.
+
+## v1.4.3.3 – Fullscreen Smooth / FPS Adaptation
+
+Khi chuyển sang fullscreen, kích thước khung hình tăng nhanh, nhất là màn hình 2K/4K hoặc DPI cao. Phiên bản này giới hạn **ngân sách điểm ảnh** của Three.js và tự điều chỉnh render scale dựa trên FPS để hạn chế giật. Video YouTube ở lớp CSS3D và luồng mic WebRTC không bị thay đổi.
+
+- Trong khung 3D nhấn **⚡ Auto** để chuyển lần lượt **Auto → Mượt → Sắc nét → Auto**.
+- **Auto** (mặc định): tự giảm độ phân giải render khi FPS tụt kéo dài và tăng chậm khi dư hiệu năng.
+- **Mượt**: ưu tiên FPS, chấp nhận giảm độ nét một chút.
+- **Sắc nét**: ưu tiên hình ảnh, có thể giảm FPS trên máy yếu.
+- FPS ước lượng hiển thị cạnh nút chất lượng sau khi chơi một lát. Khi chuyển fullscreen, bộ đếm sẽ tự lấy mẫu lại.
+- **V** đổi góc nhìn; **Shift + V** quay lại; **F** fullscreen; các phím và tương tác khác giữ nguyên.
+
+Gói GitHub Update **không chứa `public/models/` hoặc `public/models/avatar-catalog.json`** để không ghi đè model tùy chỉnh của bạn. Chỉ dùng để nâng cấp dự án v1.4.3.2/1.4.3.1 đang chạy. Nếu trước đó đã chỉnh tay các file `public/scene.js`, `public/app.js`, `public/index.html` hoặc `public/style.css`, hãy sao lưu và so sánh thay đổi trước khi upload.
+
+Lưu ý: tối ưu render không chữa được mọi trường hợp lag nếu nguyên nhân là model quá nhiều polygon, shader nặng, GPU yếu, tab bị giới hạn FPS hoặc browser không dùng tăng tốc phần cứng. Kiểm tra thực tế sau deploy bằng nút FPS.
