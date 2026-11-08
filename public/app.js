@@ -6,6 +6,7 @@ import { createBattleUI } from './battle-ui.js';
 import { createAvatarStudio } from './avatar-studio.js';
 import { createNPCUI } from './npc-ui.js';
 import { AVATAR_PALETTES, normalizeAvatarProfile } from './avatar-profile.js';
+import { CAMERA_VIEW_LABELS, nextCameraView, isCameraViewShortcut } from './camera-views.js';
 
 const $ = (id) => document.getElementById(id);
 const AVATARS = ['😎','🤩','🥳','🦊','🐱','🐼','👽','🐻'];
@@ -940,8 +941,24 @@ window.addEventListener('beforeunload',()=>{
   state.localStream?.getTracks().forEach(t=>t.stop());
   state.rawStream?.getTracks().forEach(t=>t.stop());
 });
+// The V hotkey works in normal mode and when #stage-scene is the fullscreen element.
+// A fallback button INSIDE that element is always available on touch screens and
+// when the YouTube iframe has consumed keyboard focus.
+function cycleRoomCamera(direction=1) {
+  if(!state.scene)return;
+  state.scene.setView(nextCameraView(state.scene.getView(),direction));
+}
 for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>{
   state.scene?.setView(btn.dataset.view);
+});
+$('scene-next-view').addEventListener('click',()=>cycleRoomCamera());
+document.addEventListener('keydown',event=>{
+  const overlayIsOpen = !document.getElementById('avatar-studio-modal').classList.contains('hidden')
+    || !document.getElementById('welcome-screen').classList.contains('hidden')
+    || !document.getElementById('mobile-feature-sheet').classList.contains('hidden');
+  if(!state.scene || !isCameraViewShortcut(event,overlayIsOpen))return;
+  event.preventDefault();
+  cycleRoomCamera(event.shiftKey?-1:1);
 });
 setInterval(updateProgress,250);
 setInterval(()=>{
@@ -969,6 +986,9 @@ setInterval(()=>{
     state.scene=initScene($('scene-webgl'),$('scene-css3d'),{
       onMove:(pos)=>{if(state.room&&socket.connected)socket.emit('user:move',pos);},
       onViewChange:(view)=>{
+        const label = CAMERA_VIEW_LABELS[view] || CAMERA_VIEW_LABELS.front;
+        $('scene-view-label').textContent = label;
+        $('scene-next-view').setAttribute('aria-label',`Đổi góc nhìn (V). Hiện tại: ${label}`);
         for(const btn of document.querySelectorAll('[data-view]'))btn.classList.toggle('active',btn.dataset.view===view);
         $('stage-scene').classList.toggle('is-walking',view==='walk');
         $('stage-scene').classList.toggle('is-following',view==='follow');

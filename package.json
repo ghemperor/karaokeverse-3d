@@ -1,13 +1,13 @@
 {
   "name": "karaokeverse-3d",
-  "version": "1.4.3.1",
+  "version": "1.4.3.2",
   "private": true,
   "type": "module",
-  "description": "KaraokeVerse 3D v1.4.3.1 Animation Control: explicit clip mapping; no accidental auto-looping",
+  "description": "KaraokeVerse 3D v1.4.3.2 View Hotkey: V cycles 7 views, Shift+V reverses, fullscreen/touch HUD camera control",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check lib/npc-service.js && node --check public/npc-ui.js && node --check public/app.js && node --check public/scene.js && node --check public/avatar-profile.js && node --check public/avatar-materials.js && node --check public/avatar-studio.js && node --check public/avatar-materials.js && node --check public/avatar-catalog.js && node --check public/avatar-runtime.js && node --test tests/*.test.js"
+    "check": "node --check server.js && node --check lib/npc-service.js && node --check public/npc-ui.js && node --check public/app.js && node --check public/scene.js && node --check public/camera-views.js && node --check public/avatar-profile.js && node --check public/avatar-materials.js && node --check public/avatar-studio.js && node --check public/avatar-materials.js && node --check public/avatar-catalog.js && node --check public/avatar-runtime.js && node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=20"

@@ -406,3 +406,11 @@
 
 /* v1.4.3 model provenance and fallback status */
 .avatar-asset-status{font-size:11px;line-height:1.45;color:#bdb1da;margin:6px 12px 12px;overflow-wrap:anywhere;letter-spacing:.01em;}
+
+/* v1.4.3.2 – camera hotkey and persistent fullscreen/touch camera switch. */
+.scene-next-view{position:absolute;top:12px;right:160px;z-index:13;display:flex;align-items:center;justify-content:center;gap:7px;min-height:35px;padding:8px 11px;border:1px solid #b48ef3a6;border-radius:9px;background:#221438e8;color:#f4edff;font-size:11px;font-weight:800;box-shadow:0 4px 18px #0008;touch-action:manipulation}
+.scene-next-view:hover,.scene-next-view:focus-visible{background:#55347e;outline:2px solid #cdb0ff;outline-offset:2px}
+.scene-next-view kbd{font:700 10px 'DM Sans',sans-serif;color:#ffe5ff;border:1px solid #9f7ec7;border-radius:4px;padding:2px 5px;background:#6f3d99}
+/* Video unlock must not overlap the new camera control. */
+.video-unlock{top:57px;right:13px}
+@media(max-width:690px){.scene-next-view{right:60px;padding:8px 9px;min-height:35px}.scene-next-view span{display:none}.scene-next-view kbd{font-size:10px}.video-unlock{top:58px;right:13px}}
